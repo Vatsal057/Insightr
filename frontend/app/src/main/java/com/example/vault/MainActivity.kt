@@ -17,4 +17,14 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        (application as VaultApplication).container.serverUrlManager.startDiscovery()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        (application as VaultApplication).container.serverUrlManager.stopDiscovery()
+    }
 }

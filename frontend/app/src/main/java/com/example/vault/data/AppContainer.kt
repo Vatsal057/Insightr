@@ -7,6 +7,7 @@ import com.example.vault.data.local.ProcessingHistoryDao
 import com.example.vault.data.local.VaultDatabase
 import com.example.vault.data.repository.VaultRepository
 import com.google.gson.GsonBuilder
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -24,6 +25,24 @@ class AppContainer(context: Context) {
     private val gson = GsonBuilder().create()
 
     private val okHttpClient = OkHttpClient.Builder()
+        .addInterceptor { chain ->
+            val originalRequest = chain.request()
+            val currentBaseUrl = serverUrlManager.baseUrl.trimEnd('/')
+            val newHttpUrl = try {
+                "$currentBaseUrl/".toHttpUrlOrNull()?.newBuilder()?.apply {
+                    encodedPath(originalRequest.url.encodedPath)
+                    val q = originalRequest.url.encodedQuery
+                    if (q != null) encodedQuery(q)
+                }?.build()
+            } catch (e: Exception) { null }
+
+            val newRequest = if (newHttpUrl != null) {
+                originalRequest.newBuilder().url(newHttpUrl).build()
+            } else {
+                originalRequest
+            }
+            chain.proceed(newRequest)
+        }
         .addInterceptor(HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         })
@@ -33,7 +52,7 @@ class AppContainer(context: Context) {
         .build()
 
     private fun buildApi(): VaultApi = Retrofit.Builder()
-        .baseUrl(serverUrlManager.baseUrl.trimEnd('/') + "/")
+        .baseUrl("http://localhost/") // Placeholder, overridden by Interceptor
         .client(okHttpClient)
         .addConverterFactory(GsonConverterFactory.create(gson))
         .build()

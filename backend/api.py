@@ -1,15 +1,62 @@
 from fastapi import FastAPI, Request, Form, BackgroundTasks
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse
+from contextlib import asynccontextmanager
 import uvicorn
 import asyncio
 import os
+import socket
+from zeroconf import ServiceInfo, Zeroconf
 
 from main import load_config, run_process
 import db
 import feed
 
-app = FastAPI(title="Vault API")
+# Setup Zeroconf mDNS broadcast
+zeroconf = None
+service_info = None
+
+def get_local_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global zeroconf, service_info
+    ip = get_local_ip()
+    print(f"[Vault] Starting mDNS broadcast on {ip}:8000")
+    try:
+        zeroconf = Zeroconf()
+        service_info = ServiceInfo(
+            "_insightr._tcp.local.",
+            "Vault API._insightr._tcp.local.",
+            addresses=[socket.inet_aton(ip)],
+            port=8000,
+            properties={},
+            server="vault.local."
+        )
+        zeroconf.register_service(service_info)
+    except Exception as e:
+        print(f"[Vault] mDNS broadcast failed: {e}")
+    
+    yield  # Let the app run
+    
+    # Shutdown
+    if zeroconf and service_info:
+        print("[Vault] Stopping mDNS broadcast")
+        try:
+            zeroconf.unregister_service(service_info)
+            zeroconf.close()
+        except Exception:
+            pass
+
+app = FastAPI(title="Vault API", lifespan=lifespan)
 templates = Jinja2Templates(directory="templates")
 
 # Simple in-memory store for task status (for MVP purposes)
