@@ -22,10 +22,8 @@ fun MainNavigation(container: AppContainer) {
     var currentRoute  by remember { mutableStateOf("discover") }
     var entryDetailId by remember { mutableStateOf<Int?>(null) }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(VaultBackground),
+    AmbientBackground(
+        modifier = Modifier.fillMaxSize()
     ) {
         when {
             entryDetailId != null -> {

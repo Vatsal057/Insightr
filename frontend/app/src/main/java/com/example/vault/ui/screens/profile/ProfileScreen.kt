@@ -38,9 +38,7 @@ fun ProfileScreen(
     val keyboard = LocalSoftwareKeyboardController.current
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(VaultBackground),
+        modifier = modifier.fillMaxSize(),
     ) {
         Column(
             modifier = Modifier

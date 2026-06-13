@@ -31,7 +31,7 @@ fun LibraryScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     var tab by remember { mutableIntStateOf(0) }
 
-    Box(modifier = modifier.fillMaxSize().background(VaultBackground)) {
+    Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 120.dp)) {
             // Header
             item {

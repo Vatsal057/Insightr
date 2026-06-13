@@ -55,12 +55,11 @@ fun CaptureScreen(
         if (clip.startsWith("http") && urlText.isBlank()) urlText = clip
     }
 
-    Box(modifier = modifier.fillMaxSize().background(VaultBackground)) {
+    Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Header
             Column(
                 modifier = Modifier.fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(VaultAccentDim, VaultBackground)))
                     .statusBarsPadding()
                     .padding(horizontal = 24.dp, vertical = 16.dp),
             ) {

@@ -41,7 +41,7 @@ fun ExploreScreen(
     val viewModel: ExploreViewModel = viewModel(factory = ExploreViewModel.factory(repository))
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    Box(modifier = modifier.fillMaxSize().background(VaultBackground)) {
+    Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 120.dp)) {
             // Header
             item {

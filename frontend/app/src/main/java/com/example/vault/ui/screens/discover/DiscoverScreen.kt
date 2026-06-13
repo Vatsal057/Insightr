@@ -36,14 +36,7 @@ fun DiscoverScreen(
     val listState = rememberLazyListState()
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.radialGradient(
-                    colors = listOf(VaultAccentDim, VaultBackground),
-                    radius = 800f,
-                )
-            )
+        modifier = modifier.fillMaxSize()
     ) {
         PullToRefreshBox(
             isRefreshing = uiState is DiscoverUiState.Loading,

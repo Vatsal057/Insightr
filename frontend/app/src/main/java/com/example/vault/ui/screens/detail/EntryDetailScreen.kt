@@ -72,7 +72,6 @@ fun EntryDetailScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Brush.verticalGradient(listOf(VaultAccentDim, VaultBackground)))
                                 .statusBarsPadding()
                                 .padding(top = 16.dp, bottom = 32.dp, start = 24.dp, end = 24.dp),
                         ) {
