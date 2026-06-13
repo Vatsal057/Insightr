@@ -1,5 +1,6 @@
 package com.example.vault
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,6 +29,7 @@ fun MainNavigation(container: AppContainer) {
     ) {
         when {
             entryDetailId != null -> {
+                BackHandler { entryDetailId = null }
                 EntryDetailScreen(
                     entryId            = entryDetailId!!,
                     repository         = container.repository,
@@ -39,6 +41,9 @@ fun MainNavigation(container: AppContainer) {
             }
 
             else -> {
+                if (currentRoute != "discover") {
+                    BackHandler { currentRoute = "discover" }
+                }
                 when (currentRoute) {
                     "discover" -> DiscoverScreen(
                         repository   = container.repository,

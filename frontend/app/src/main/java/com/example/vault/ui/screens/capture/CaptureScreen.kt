@@ -61,7 +61,8 @@ fun CaptureScreen(
             Column(
                 modifier = Modifier.fillMaxWidth()
                     .background(Brush.verticalGradient(listOf(VaultAccentDim, VaultBackground)))
-                    .padding(horizontal = 24.dp, vertical = 40.dp).padding(top = 24.dp),
+                    .statusBarsPadding()
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
             ) {
                 Text("Capture", color = VaultTextPrimary, fontSize = 32.sp, fontWeight = FontWeight.Bold)
                 Text("Drop a link. AI does the rest.", color = VaultTextSecondary, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))

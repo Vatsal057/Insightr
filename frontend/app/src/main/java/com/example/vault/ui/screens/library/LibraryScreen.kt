@@ -38,7 +38,8 @@ fun LibraryScreen(
                 Column(
                     modifier = Modifier.fillMaxWidth()
                         .background(Brush.verticalGradient(listOf(VaultAccentDim, VaultBackground)))
-                        .padding(horizontal = 24.dp).padding(top = 64.dp, bottom = 20.dp),
+                        .statusBarsPadding()
+                        .padding(horizontal = 24.dp).padding(top = 16.dp, bottom = 20.dp),
                 ) {
                     Text("Library", color = VaultTextPrimary, fontSize = 32.sp, fontWeight = FontWeight.Bold)
                     Text("Your curated knowledge", color = VaultTextSecondary, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))

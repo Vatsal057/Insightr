@@ -59,8 +59,9 @@ fun DiscoverScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .statusBarsPadding()
                             .padding(horizontal = 24.dp)
-                            .padding(top = 64.dp, bottom = 8.dp),
+                            .padding(top = 16.dp, bottom = 8.dp),
                     ) {
                         Text(
                             text = "Your Vault",

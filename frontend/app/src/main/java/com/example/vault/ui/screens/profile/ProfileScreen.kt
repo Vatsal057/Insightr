@@ -45,8 +45,9 @@ fun ProfileScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .padding(24.dp)
-                .padding(top = 40.dp),
+                .padding(top = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             // ─── Header ──────────────────────────────────────────────────
