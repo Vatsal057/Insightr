@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+Antigravity_Design_Skills/
+temp_images/
+vault.db
+.env
+.DS_Store
+*.pyc
+.vscode/
+.idea/
