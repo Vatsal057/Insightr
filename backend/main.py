@@ -60,6 +60,8 @@ def load_config():
     }
 
 
+import uuid
+
 def run_process(url: str, config: dict, export_md: bool = False):
     """
     Main processing pipeline. Downloads, transcribes, extracts keyframes + OCR,
@@ -68,12 +70,17 @@ def run_process(url: str, config: dict, export_md: bool = False):
     exports a Markdown copy.
     """
     db.init_db(config["db_path"])
+    
+    # Use unique temp files to prevent concurrency issues in API mode
+    session_id = str(uuid.uuid4())[:8]
+    temp_video = f"temp_video_{session_id}.mp4"
+    temp_audio = f"temp_audio_{session_id}.mp3"
 
     try:
         print(f"\n[Vault] Processing: {url}\n")
 
         print("  [1/5] Downloading content...")
-        content_type, data, caption = download_content(url, TEMP_VIDEO, config["cookies_path"])
+        content_type, data, caption = download_content(url, temp_video, config["cookies_path"])
         print(f"        Done ({content_type}).")
 
         frames = []
@@ -81,15 +88,15 @@ def run_process(url: str, config: dict, export_md: bool = False):
 
         if content_type == "video":
             print("  [2/5] Extracting audio...")
-            extract_audio(TEMP_VIDEO, TEMP_AUDIO)
+            extract_audio(temp_video, temp_audio)
             print("        Done.")
 
             print("  [2/5] Extracting keyframes...")
-            frames = extract_smart_keyframes(TEMP_VIDEO, max_frames=12)
+            frames = extract_smart_keyframes(temp_video, max_frames=12)
             print(f"        Found {len(frames)} keyframes.")
 
             print("  [3/5] Transcribing speech (this may take 30-60 seconds)...")
-            transcript_timeline = transcribe(TEMP_AUDIO)
+            transcript_timeline = transcribe(temp_audio)
             word_count = len(timeline_to_text(transcript_timeline).split())
             print(f"        Transcribed {word_count} words across {len(transcript_timeline)} segments.")
 
@@ -160,7 +167,10 @@ def run_process(url: str, config: dict, export_md: bool = False):
         raise
 
     finally:
-        cleanup()
+        # Cleanup unique temp files
+        for path in [temp_video, temp_audio]:
+            if os.path.exists(path):
+                os.remove(path)
 
 
 def cmd_search(args, config):

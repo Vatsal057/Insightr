@@ -70,10 +70,22 @@ def extract_ocr_timeline(frames: list[dict]) -> list[TimelineEntry]:
         if not text or len(text) < 3:
             continue
 
-        # Skip if essentially identical to the previous frame's text
-        # (common when the same on-screen caption persists across frames)
-        if text == last_text:
-            continue
+        # Skip if essentially identical to the previous frame's text.
+        # Uses a basic character-overlap check to handle minor OCR noise.
+        if last_text:
+            longer = max(len(text), len(last_text))
+            shorter = min(len(text), len(last_text))
+            
+            # If the text is very similar to the last one, skip it.
+            # (e.g. "Step 1: Python" vs "Step 1: Pyth0n")
+            if text == last_text:
+                continue
+            
+            # Simple fuzzy check: if strings are >80% similar, consider them duplicates
+            # We don't import a full fuzzy library to keep dependencies low.
+            shared = sum(1 for a, b in zip(text, last_text) if a == b)
+            if shared / longer > 0.8:
+                continue
 
         timeline.append(TimelineEntry(
             timestamp=format_timestamp(frame["timestamp_seconds"]),

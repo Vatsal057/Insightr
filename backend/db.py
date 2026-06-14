@@ -1,9 +1,5 @@
 """
-SQLite storage layer for Insightr.
-
-Replaces vault.py's "write a markdown file and regex-edit an index" approach.
-Everything lives in insightr.db; Markdown is generated on demand from this
-data (see markdown_export.py).
+SQLite storage layer for Insightr — all 12 insight features.
 """
 
 from __future__ import annotations
@@ -14,26 +10,35 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from schema import KnowledgeEntry, Connection, Concept, TypeSpecificField
+from schema import (
+    KnowledgeEntry, Connection, Concept, TypeSpecificField,
+    ImplementationStep, ToolResource, RabbitHole, ReferencedArtifact,
+    EffortEstimation, MissingContextItem, NoteBlock,
+)
 from keywords import extract_keywords
 
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS entries (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    title           TEXT NOT NULL,
-    source_url      TEXT NOT NULL,
-    field           TEXT NOT NULL,
-    content_type    TEXT NOT NULL DEFAULT 'general',
-    type_specific_fields TEXT NOT NULL DEFAULT '[]', -- JSON array of {label, value}
-    summary         TEXT NOT NULL,   -- JSON: {headline, body}
-    key_points      TEXT NOT NULL,
-    explore_further TEXT NOT NULL,   -- JSON array of strings
-    topic_map       TEXT NOT NULL,   -- JSON: {main_topic, subtopics}
-    referenced_artifacts TEXT NOT NULL, -- JSON array
-    next_step       TEXT NOT NULL,
-    keywords        TEXT NOT NULL DEFAULT '[]', -- JSON array, precomputed for connections
-    created_at      TEXT NOT NULL
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    title                TEXT NOT NULL,
+    source_url           TEXT NOT NULL,
+    field                TEXT NOT NULL,
+    content_type         TEXT NOT NULL DEFAULT 'general',
+    type_specific_fields TEXT NOT NULL DEFAULT '[]',
+    summary              TEXT NOT NULL,
+    key_points           TEXT NOT NULL,
+    implementation_plan  TEXT NOT NULL DEFAULT '[]',
+    tools_resources      TEXT NOT NULL DEFAULT '[]',
+    rabbit_hole          TEXT NOT NULL DEFAULT '{}',
+    referenced_artifacts TEXT NOT NULL DEFAULT '[]',
+    topic_map            TEXT NOT NULL,
+    effort_estimation    TEXT,
+    missing_context      TEXT NOT NULL DEFAULT '[]',
+    explore_further      TEXT NOT NULL DEFAULT '[]',
+    next_step            TEXT NOT NULL,
+    keywords             TEXT NOT NULL DEFAULT '[]',
+    created_at           TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS tags (
@@ -96,10 +101,23 @@ CREATE TABLE IF NOT EXISTS collection_entries (
 );
 
 CREATE VIRTUAL TABLE IF NOT EXISTS entries_fts USING fts5(
-    title, summary_text, key_points, claims_text, tags_text,
+    title, summary_text, key_points, claims_text, tags_text, tools_text, action_items_text,
     content='', tokenize='porter'
 );
 """
+
+# New columns added after initial release — applied via _migrate()
+MIGRATION_COLUMNS = [
+    ("content_type",         "TEXT NOT NULL DEFAULT 'general'"),
+    ("type_specific_fields", "TEXT NOT NULL DEFAULT '[]'"),
+    ("keywords",             "TEXT NOT NULL DEFAULT '[]'"),
+    ("implementation_plan",  "TEXT NOT NULL DEFAULT '[]'"),
+    ("tools_resources",      "TEXT NOT NULL DEFAULT '[]'"),
+    ("rabbit_hole",          "TEXT NOT NULL DEFAULT '{}'"),
+    ("effort_estimation",    "TEXT"),
+    ("missing_context",      "TEXT NOT NULL DEFAULT '[]'"),
+    ("note_blocks",          "TEXT NOT NULL DEFAULT '[]'"),
+]
 
 
 def get_connection(db_path: str) -> sqlite3.Connection:
@@ -110,18 +128,35 @@ def get_connection(db_path: str) -> sqlite3.Connection:
 
 
 def _migrate(conn: sqlite3.Connection) -> None:
-    """
-    Lightweight forward migration: adds columns introduced after the initial
-    release if they're missing on an existing database. No migration
-    framework — just ALTER TABLE ... ADD COLUMN, ignored if already present.
-    """
+    # 1. Standard table migrations
     existing = {row["name"] for row in conn.execute("PRAGMA table_info(entries)")}
-    if "content_type" not in existing:
-        conn.execute("ALTER TABLE entries ADD COLUMN content_type TEXT NOT NULL DEFAULT 'general'")
-    if "type_specific_fields" not in existing:
-        conn.execute("ALTER TABLE entries ADD COLUMN type_specific_fields TEXT NOT NULL DEFAULT '[]'")
-    if "keywords" not in existing:
-        conn.execute("ALTER TABLE entries ADD COLUMN keywords TEXT NOT NULL DEFAULT '[]'")
+    for col_name, col_def in MIGRATION_COLUMNS:
+        if col_name not in existing:
+            conn.execute(f"ALTER TABLE entries ADD COLUMN {col_name} {col_def}")
+    
+    # 2. FTS migration — FTS5 doesn't support ALTER TABLE. 
+    # Check if action_items_text exists in the virtual table. 
+    # If not, recreate it from the main entries table.
+    try:
+        conn.execute("SELECT action_items_text FROM entries_fts LIMIT 1")
+    except sqlite3.OperationalError:
+        # Recreate FTS table
+        conn.execute("DROP TABLE IF EXISTS entries_fts")
+        # Define the exact FTS5 creation SQL
+        fts_sql = """
+        CREATE VIRTUAL TABLE entries_fts USING fts5(
+            title, summary_text, key_points, claims_text, tags_text, tools_text, action_items_text,
+            content='', tokenize='porter'
+        )
+        """
+        conn.execute(fts_sql)
+        # Re-index everything (this is fast for small-medium vaults)
+        conn.execute("""
+            INSERT INTO entries_fts (rowid, title, summary_text, key_points, claims_text, tags_text, tools_text, action_items_text)
+            SELECT e.id, e.title, e.summary, e.key_points, '', '', '', ''
+            FROM entries e
+        """)
+        
     conn.commit()
 
 
@@ -147,25 +182,28 @@ def _get_or_create_tag(conn: sqlite3.Connection, name: str) -> int:
 
 
 def save_entry(db_path: str, entry: KnowledgeEntry) -> int:
-    """
-    Inserts a KnowledgeEntry (and its tags/action items/claims) into the DB.
-    Returns the new entry's id.
-    """
     conn = get_connection(db_path)
     try:
-        keyword_text = " ".join(
-            [entry.summary.headline, entry.summary.body]
-            + [c.claim for c in entry.claims]
-        )
+        # Build keyword corpus from headline + claims + tools + rabbit hole
+        keyword_text = " ".join(filter(None, [
+            entry.summary.headline,
+            entry.summary.body,
+            *[c.claim for c in entry.claims],
+            *[t.name for t in entry.tools_resources],
+            *entry.rabbit_hole.follow_up_questions,
+        ]))
         entry_keywords = extract_keywords(keyword_text)
 
         cur = conn.execute(
             """
-            INSERT INTO entries
-                (title, source_url, field, content_type, type_specific_fields,
-                 summary, key_points,
-                 explore_further, topic_map, referenced_artifacts, next_step, keywords, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO entries (
+                title, source_url, field, content_type, type_specific_fields,
+                summary, key_points,
+                implementation_plan, tools_resources, rabbit_hole,
+                referenced_artifacts, topic_map,
+                effort_estimation, missing_context,
+                explore_further, next_step, keywords, note_blocks, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 entry.title,
@@ -175,11 +213,17 @@ def save_entry(db_path: str, entry: KnowledgeEntry) -> int:
                 json.dumps([f.model_dump() for f in entry.type_specific_fields]),
                 entry.summary.model_dump_json(),
                 entry.key_points,
-                json.dumps(entry.explore_further),
-                entry.topic_map.model_dump_json(),
+                json.dumps([s.model_dump() for s in entry.implementation_plan]),
+                json.dumps([t.model_dump() for t in entry.tools_resources]),
+                entry.rabbit_hole.model_dump_json(),
                 json.dumps([a.model_dump() for a in entry.referenced_artifacts]),
+                entry.topic_map.model_dump_json(),
+                entry.effort_estimation.model_dump_json() if entry.effort_estimation else None,
+                json.dumps([m.model_dump() for m in entry.missing_context]),
+                json.dumps(entry.rabbit_hole.follow_up_questions),  # legacy explore_further
                 entry.next_step,
                 json.dumps(entry_keywords),
+                json.dumps([b.model_dump() for b in entry.note_blocks]),
                 entry.created_at,
             ),
         )
@@ -204,13 +248,15 @@ def save_entry(db_path: str, entry: KnowledgeEntry) -> int:
                 (entry_id, claim.claim, claim.verifiability, claim.note),
             )
 
-        # Populate full-text search index
+        # FTS index — include tool names and action items for searchability
         claims_text = " ".join(c.claim for c in entry.claims)
         tags_text = " ".join(entry.tags)
+        tools_text = " ".join(t.name for t in entry.tools_resources)
+        action_items_text = " ".join(a.text for a in entry.action_items)
         conn.execute(
             """
-            INSERT INTO entries_fts (rowid, title, summary_text, key_points, claims_text, tags_text)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO entries_fts (rowid, title, summary_text, key_points, claims_text, tags_text, tools_text, action_items_text)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 entry_id,
@@ -219,6 +265,8 @@ def save_entry(db_path: str, entry: KnowledgeEntry) -> int:
                 entry.key_points,
                 claims_text,
                 tags_text,
+                tools_text,
+                action_items_text,
             ),
         )
 
@@ -248,11 +296,7 @@ def _row_to_entry(conn: sqlite3.Connection, row: sqlite3.Row) -> KnowledgeEntry:
 
     tags = [
         r["name"] for r in conn.execute(
-            """
-            SELECT t.name FROM tags t
-            JOIN entry_tags et ON et.tag_id = t.id
-            WHERE et.entry_id = ?
-            """,
+            "SELECT t.name FROM tags t JOIN entry_tags et ON et.tag_id = t.id WHERE et.entry_id = ?",
             (entry_id,),
         )
     ]
@@ -276,8 +320,7 @@ def _row_to_entry(conn: sqlite3.Connection, row: sqlite3.Row) -> KnowledgeEntry:
         for r in conn.execute(
             """
             SELECT c.related_entry_id, c.reason, e.title
-            FROM connections c
-            JOIN entries e ON e.id = c.related_entry_id
+            FROM connections c JOIN entries e ON e.id = c.related_entry_id
             WHERE c.entry_id = ?
             """,
             (entry_id,),
@@ -290,13 +333,42 @@ def _row_to_entry(conn: sqlite3.Connection, row: sqlite3.Row) -> KnowledgeEntry:
         for r in conn.execute(
             """
             SELECT c.id, c.concept_type, c.name, c.summary
-            FROM concepts c
-            JOIN entry_concepts ec ON ec.concept_id = c.id
-            WHERE ec.entry_id = ?
-            ORDER BY c.id
+            FROM concepts c JOIN entry_concepts ec ON ec.concept_id = c.id
+            WHERE ec.entry_id = ? ORDER BY c.id
             """,
             (entry_id,),
         )
+    ]
+
+    # Parse new fields with fallback for older DB rows
+    def _parse_json(raw, default):
+        try:
+            return json.loads(raw) if raw else default
+        except Exception:
+            return default
+
+    implementation_plan = [
+        ImplementationStep(**s)
+        for s in _parse_json(row["implementation_plan"] if "implementation_plan" in row.keys() else None, [])
+    ]
+    tools_resources = [
+        ToolResource(**t)
+        for t in _parse_json(row["tools_resources"] if "tools_resources" in row.keys() else None, [])
+    ]
+    rabbit_hole_raw = _parse_json(row["rabbit_hole"] if "rabbit_hole" in row.keys() else None, {})
+    rabbit_hole = RabbitHole(**rabbit_hole_raw) if rabbit_hole_raw else RabbitHole()
+
+    effort_raw = row["effort_estimation"] if "effort_estimation" in row.keys() else None
+    effort_estimation = EffortEstimation(**json.loads(effort_raw)) if effort_raw else None
+
+    missing_context = [
+        MissingContextItem(**m)
+        for m in _parse_json(row["missing_context"] if "missing_context" in row.keys() else None, [])
+    ]
+
+    note_blocks = [
+        NoteBlock(**b)
+        for b in _parse_json(row["note_blocks"] if "note_blocks" in row.keys() else None, [])
     ]
 
     return KnowledgeEntry(
@@ -305,15 +377,23 @@ def _row_to_entry(conn: sqlite3.Connection, row: sqlite3.Row) -> KnowledgeEntry:
         field=row["field"],
         tags=tags,
         content_type=row["content_type"],
-        type_specific_fields=[TypeSpecificField(**f) for f in json.loads(row["type_specific_fields"])],
+        type_specific_fields=[TypeSpecificField(**f) for f in _parse_json(row["type_specific_fields"], [])],
         summary=json.loads(row["summary"]),
         key_points=row["key_points"],
         action_items=action_items,
+        implementation_plan=implementation_plan,
         claims=claims,
-        explore_further=json.loads(row["explore_further"]),
+        tools_resources=tools_resources,
+        rabbit_hole=rabbit_hole,
+        referenced_artifacts=[
+            ReferencedArtifact(**a)
+            for a in _parse_json(row["referenced_artifacts"], [])
+        ],
         topic_map=json.loads(row["topic_map"]),
-        referenced_artifacts=json.loads(row["referenced_artifacts"]),
+        effort_estimation=effort_estimation,
+        missing_context=missing_context,
         next_step=row["next_step"],
+        note_blocks=note_blocks,
         created_at=row["created_at"],
         connections=connections,
         concepts=concepts,
@@ -358,8 +438,14 @@ def search_entries(db_path: str, query: str, tag: Optional[str] = None,
         conditions = []
 
         if query:
+            # Simple sanitization for FTS5: quote the query if it contains special chars
+            # but preserve OR/AND if the user is using them (basic approach)
+            clean_query = query.replace('"', '""')
+            if any(c in clean_query for c in "-*+"):
+                clean_query = f'"{clean_query}"'
+            
             conditions.append("entries_fts MATCH ?")
-            params.append(query)
+            params.append(clean_query)
 
         if tag:
             sql += """
@@ -393,8 +479,7 @@ def list_action_items(db_path: str, done: Optional[bool] = None) -> List[sqlite3
     try:
         sql = """
             SELECT a.id, a.text, a.done, e.id as entry_id, e.title
-            FROM action_items a
-            JOIN entries e ON e.id = a.entry_id
+            FROM action_items a JOIN entries e ON e.id = a.entry_id
         """
         params: list = []
         if done is not None:
@@ -488,29 +573,25 @@ def get_collection_entries(db_path: str, collection_name: str) -> List[Knowledge
 
 
 # ---------------------------------------------------------------------------
-# For connection-finding (see connections.py)
+# Connections scoring (see connections.py)
 # ---------------------------------------------------------------------------
 
 def get_all_entries_summary(db_path: str, exclude_id: Optional[int] = None) -> List[dict]:
-    """Lightweight data for similarity scoring against existing entries."""
     conn = get_connection(db_path)
     try:
         rows = conn.execute(
-            "SELECT id, title, field, content_type, topic_map, referenced_artifacts, keywords FROM entries"
+            "SELECT id, title, field, content_type, topic_map, referenced_artifacts, tools_resources, keywords FROM entries"
         ).fetchall()
         result = []
         for row in rows:
             if exclude_id is not None and row["id"] == exclude_id:
                 continue
             topic_map = json.loads(row["topic_map"])
-            artifacts = [a["name"] for a in json.loads(row["referenced_artifacts"])]
+            artifacts = [a["name"] for a in json.loads(row["referenced_artifacts"] or "[]")]
+            tools = [t["name"] for t in json.loads(row["tools_resources"] or "[]")]
             tags = [
                 r["name"] for r in conn.execute(
-                    """
-                    SELECT t.name FROM tags t
-                    JOIN entry_tags et ON et.tag_id = t.id
-                    WHERE et.entry_id = ?
-                    """,
+                    "SELECT t.name FROM tags t JOIN entry_tags et ON et.tag_id = t.id WHERE et.entry_id = ?",
                     (row["id"],),
                 )
             ]
@@ -521,8 +602,8 @@ def get_all_entries_summary(db_path: str, exclude_id: Optional[int] = None) -> L
                 "content_type": row["content_type"],
                 "topic_map": topic_map,
                 "tags": tags,
-                "artifacts": artifacts,
-                "keywords": json.loads(row["keywords"]),
+                "artifacts": artifacts + tools,
+                "keywords": json.loads(row["keywords"] or "[]"),
             })
         return result
     finally:
@@ -530,15 +611,10 @@ def get_all_entries_summary(db_path: str, exclude_id: Optional[int] = None) -> L
 
 
 # ---------------------------------------------------------------------------
-# Knowledge Cards
+# Knowledge Cards (Concepts)
 # ---------------------------------------------------------------------------
 
 def save_concepts(db_path: str, entry_id: int, concepts: List[Concept]) -> List[int]:
-    """
-    Inserts concepts, deduplicating by (concept_type, name) case-insensitively.
-    If a concept already exists, it is reused and linked to this entry rather
-    than duplicated. Returns the list of concept ids linked to this entry.
-    """
     if not concepts:
         return []
 
@@ -546,17 +622,23 @@ def save_concepts(db_path: str, entry_id: int, concepts: List[Concept]) -> List[
     concept_ids = []
     try:
         for concept in concepts:
+            # Basic normalization: title case and strip punctuation
+            name = concept.name.strip().strip(".").title()
+            # Special case for known acronyms if needed, but Title case is a good default
+            
             existing = conn.execute(
-                "SELECT id FROM concepts WHERE concept_type = ? AND name = ? COLLATE NOCASE",
-                (concept.concept_type, concept.name),
+                "SELECT id FROM concepts WHERE name = ? COLLATE NOCASE",
+                (name,),
             ).fetchone()
 
             if existing:
                 concept_id = existing["id"]
+                # Optional: Update concept_type if the new one is more specific? 
+                # For now, we just stick with the first one created.
             else:
                 cur = conn.execute(
                     "INSERT INTO concepts (concept_type, name, summary, created_at) VALUES (?, ?, ?, ?)",
-                    (concept.concept_type, concept.name, concept.summary, datetime.now().isoformat()),
+                    (concept.concept_type, name, concept.summary, datetime.now().isoformat()),
                 )
                 concept_id = cur.lastrowid
 
@@ -578,10 +660,8 @@ def get_concepts_for_entry(db_path: str, entry_id: int) -> List[Concept]:
         rows = conn.execute(
             """
             SELECT c.id, c.concept_type, c.name, c.summary
-            FROM concepts c
-            JOIN entry_concepts ec ON ec.concept_id = c.id
-            WHERE ec.entry_id = ?
-            ORDER BY c.id
+            FROM concepts c JOIN entry_concepts ec ON ec.concept_id = c.id
+            WHERE ec.entry_id = ? ORDER BY c.id
             """,
             (entry_id,),
         ).fetchall()
@@ -599,8 +679,7 @@ def list_concepts(db_path: str, concept_type: Optional[str] = None,
     conn = get_connection(db_path)
     try:
         sql = "SELECT id, concept_type, name, summary FROM concepts"
-        conditions = []
-        params: list = []
+        conditions, params = [], []
 
         if concept_type:
             conditions.append("concept_type = ?")
@@ -625,12 +704,27 @@ def get_entries_for_concept(db_path: str, concept_id: int) -> List[sqlite3.Row]:
         return conn.execute(
             """
             SELECT e.id, e.title, e.field, e.created_at
-            FROM entries e
-            JOIN entry_concepts ec ON ec.entry_id = e.id
-            WHERE ec.concept_id = ?
-            ORDER BY e.id DESC
+            FROM entries e JOIN entry_concepts ec ON ec.entry_id = e.id
+            WHERE ec.concept_id = ? ORDER BY e.id DESC
             """,
             (concept_id,),
         ).fetchall()
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Deep Research Prompt — on-demand generation endpoint helper
+# ---------------------------------------------------------------------------
+
+def get_deep_research_prompt(db_path: str, entry_id: int) -> Optional[str]:
+    """Returns the pre-generated deep research prompt for an entry."""
+    conn = get_connection(db_path)
+    try:
+        row = conn.execute("SELECT rabbit_hole FROM entries WHERE id = ?", (entry_id,)).fetchone()
+        if not row or not row["rabbit_hole"]:
+            return None
+        rabbit_hole = json.loads(row["rabbit_hole"])
+        return rabbit_hole.get("deep_research_prompt") or None
     finally:
         conn.close()

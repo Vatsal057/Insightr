@@ -25,7 +25,8 @@ DEFAULT_TOP_N = 8
 
 def extract_keywords(text: str, top_n: int = DEFAULT_TOP_N) -> List[str]:
     """Returns the top_n most frequent meaningful words in `text`."""
-    words = re.findall(r"[a-z]{3,}", text.lower())
+    # Allow alphanumeric words (like GPT-4) and hyphens
+    words = re.findall(r"\b[a-z][a-z0-9\-]{2,}\b", text.lower())
     words = [w for w in words if w not in STOPWORDS]
     counts = Counter(words)
     return [word for word, _ in counts.most_common(top_n)]
