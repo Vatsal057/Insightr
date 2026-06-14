@@ -1,7 +1,4 @@
-// Top-level build file
 plugins {
-  alias(libs.plugins.android.application) apply false
-  alias(libs.plugins.compose.compiler) apply false
-  alias(libs.plugins.kotlin.serialization) apply false
-  alias(libs.plugins.ksp) apply false
+    id("com.android.application") version "8.4.2" apply false
+    id("org.jetbrains.kotlin.android") version "1.9.24" apply false
 }

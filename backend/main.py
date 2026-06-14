@@ -49,11 +49,8 @@ def load_config():
         )
 
     if errors:
-        print("\n[Vault] Setup required. Fix these issues in your .env file:\n")
-        for err in errors:
-            print(err)
-        print("\nCopy .env.example to .env and fill in your values.")
-        sys.exit(1)
+        error_msg = "\n".join(errors)
+        raise ValueError(f"Setup required. Fix these issues in your .env file:\n{error_msg}")
 
     return {
         "gemini_api_key": api_key,
@@ -160,7 +157,7 @@ def run_process(url: str, config: dict, export_md: bool = False):
 
     except RuntimeError as e:
         print(f"\n[Vault] Error: {e}\n")
-        sys.exit(1)
+        raise
 
     finally:
         cleanup()
@@ -300,23 +297,27 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    config = load_config()
-    db.init_db(config["db_path"])
+    try:
+        config = load_config()
+        db.init_db(config["db_path"])
 
-    if args.command == "process":
-        run_process(args.url, config, export_md=args.export_md)
-    elif args.command == "search":
-        cmd_search(args, config)
-    elif args.command == "todo":
-        cmd_todo(args, config)
-    elif args.command == "check":
-        cmd_check(args, config)
-    elif args.command == "collection":
-        cmd_collection(args, config)
-    elif args.command == "concepts":
-        cmd_concepts(args, config)
-    elif args.command == "export":
-        cmd_export(args, config)
+        if args.command == "process":
+            run_process(args.url, config, export_md=args.export_md)
+        elif args.command == "search":
+            cmd_search(args, config)
+        elif args.command == "todo":
+            cmd_todo(args, config)
+        elif args.command == "check":
+            cmd_check(args, config)
+        elif args.command == "collection":
+            cmd_collection(args, config)
+        elif args.command == "concepts":
+            cmd_concepts(args, config)
+        elif args.command == "export":
+            cmd_export(args, config)
+    except (ValueError, RuntimeError) as e:
+        print(f"\n{e}\n")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
