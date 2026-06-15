@@ -1,0 +1,52 @@
+# macOS/OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Gradle
+.gradle/
+build/
+
+# Python
+**/__pycache__/
+**/venv/
+**/.venv/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+backend/.env
+backend/vault.db
+backend/temp_images/
+backend/Antigravity_Design_Skills/
+
+# Flutter / Dart
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+**/build/
+**/coverage/
+**/migrate_working_dir/
+**/doc/api/
+**/ios/Flutter/.last_build_id
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+app.*.symbols
+app.*.map.json
+
+# Local config & Log files
+*.log
+.env
