@@ -7,6 +7,7 @@ import 'screens/home/home_screen.dart';
 import 'screens/onboarding/splash_screen.dart';
 import 'screens/onboarding/feature_screen.dart';
 import 'screens/onboarding/vault_onboard_screen.dart';
+import 'services/api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +21,8 @@ void main() async {
 
   final prefs = await SharedPreferences.getInstance();
   final hasSeenOnboarding = prefs.getBool(AppConstants.hasSeenOnboardingKey) ?? false;
+
+  await ApiService().initialize();
 
   runApp(InsightrApp(showOnboarding: !hasSeenOnboarding));
 }

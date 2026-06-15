@@ -22,6 +22,7 @@ Endpoint map (for frontend agents):
 from fastapi import FastAPI, Request, Form, BackgroundTasks
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import os
 import socket
@@ -42,6 +43,14 @@ app = FastAPI(
     title="Insightr API",
     description="Transform short-form content into structured knowledge — 12 insight features.",
     version="2.0.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 templates = Jinja2Templates(directory="templates")
@@ -286,6 +295,37 @@ async def get_collection(name: str):
 
 
 # ── Markdown Export ─────────────────────────────────────────────────────────
+
+@app.get("/api/export", response_class=PlainTextResponse, summary="Bulk export the entire vault")
+async def export_vault_md(format: str = "markdown"):
+    """
+    Exports the entire vault as a single concatenated Markdown string.
+    Only 'markdown' format is currently supported.
+    """
+    if format != "markdown":
+        return JSONResponse({"error": "Only markdown format is supported currently"}, status_code=400)
+        
+    config = load_config()
+    db.init_db(config["db_path"])
+    
+    # Get all entries
+    rows = db.list_entries(config["db_path"], limit=10000)
+    entries = []
+    for row in rows:
+        entry = db.get_entry(config["db_path"], row["id"])
+        if entry:
+            entries.append(entry)
+            
+    if not entries:
+        return ""
+        
+    parts = ["# Full Vault Export", ""]
+    for entry in entries:
+        parts.append(entry_to_markdown(entry))
+        parts.append("\n---\n")
+        
+    return "\n".join(parts)
+
 
 @app.get("/api/export/{entry_id}", response_class=PlainTextResponse,
          summary="Export entry as Obsidian-flavoured Markdown")

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:multicast_dns/multicast_dns.dart';
 
 import '../core/constants.dart';
 import '../models/action_item.dart';
@@ -31,7 +32,33 @@ class ApiService {
   ApiService._internal();
 
   final _client = http.Client();
-  final _base = AppConstants.baseUrl;
+  String _base = AppConstants.baseUrl;
+
+  Future<void> initialize() async {
+    try {
+      final MDnsClient client = MDnsClient();
+      await client.start();
+
+      final String name = '_insightr._tcp.local';
+
+      await for (final PtrResourceRecord ptr in client.lookup<PtrResourceRecord>(
+          ResourceRecordQuery.serverPointer(name), timeout: const Duration(seconds: 2))) {
+        await for (final SrvResourceRecord srv in client.lookup<SrvResourceRecord>(
+            ResourceRecordQuery.service(ptr.domainName))) {
+          await for (final IPAddressResourceRecord ip in client.lookup<IPAddressResourceRecord>(
+              ResourceRecordQuery.addressIPv4(srv.target))) {
+            _base = 'http://${ip.address.address}:${srv.port}';
+            print('Found Insightr Backend via mDNS at $_base');
+            client.stop();
+            return;
+          }
+        }
+      }
+      client.stop();
+    } catch (e) {
+      print('mDNS discovery failed: $e');
+    }
+  }
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
 
