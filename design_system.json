@@ -1,0 +1,136 @@
+{
+  "designSystem": {
+    "displayName": "Insightr v2 - Liquid Glass",
+    "theme": {
+      "colorMode": "DARK",
+      "colorVariant": "FIDELITY",
+      "customColor": "#c9a84c",
+      "overridePrimaryColor": "#c9a84c",
+      "overrideSecondaryColor": "#9a9070",
+      "overrideNeutralColor": "#0e0e06",
+      "overrideTertiaryColor": "#5c9a6a",
+      "headlineFont": "INTER",
+      "bodyFont": "INTER",
+      "labelFont": "INTER",
+      "roundness": "ROUND_TWELVE",
+      "spacing": {
+        "spacing-xs": "4px",
+        "spacing-sm": "8px",
+        "spacing-md": "12px",
+        "spacing-lg": "16px",
+        "spacing-xl": "20px",
+        "spacing-2xl": "24px",
+        "spacing-3xl": "32px",
+        "spacing-4xl": "40px",
+        "spacing-5xl": "56px"
+      },
+      "typography": {
+        "display-lg": {
+          "fontFamily": "Inter",
+          "fontSize": "56px",
+          "fontWeight": "800",
+          "letterSpacing": "-1.5px",
+          "lineHeight": "1.05"
+        },
+        "display-md": {
+          "fontFamily": "Inter",
+          "fontSize": "52px",
+          "fontWeight": "900",
+          "letterSpacing": "-1.5px",
+          "lineHeight": "1.0"
+        },
+        "display-sm": {
+          "fontFamily": "Inter",
+          "fontSize": "48px",
+          "fontWeight": "800",
+          "letterSpacing": "-1px",
+          "lineHeight": "1.05"
+        },
+        "headline-lg": {
+          "fontFamily": "Inter",
+          "fontSize": "42px",
+          "fontWeight": "800",
+          "letterSpacing": "-1px",
+          "lineHeight": "1.1"
+        },
+        "headline-md": {
+          "fontFamily": "Inter",
+          "fontSize": "40px",
+          "fontWeight": "800",
+          "letterSpacing": "-1px",
+          "lineHeight": "1.1"
+        },
+        "headline-sm": {
+          "fontFamily": "Inter",
+          "fontSize": "36px",
+          "fontWeight": "900",
+          "letterSpacing": "-1px",
+          "lineHeight": "1.2"
+        },
+        "title-lg": {
+          "fontFamily": "Inter",
+          "fontSize": "28px",
+          "fontWeight": "800",
+          "letterSpacing": "0px",
+          "lineHeight": "1.2"
+        },
+        "title-md": {
+          "fontFamily": "Inter",
+          "fontSize": "26px",
+          "fontWeight": "800",
+          "letterSpacing": "0px",
+          "lineHeight": "1.2"
+        },
+        "title-sm": {
+          "fontFamily": "Inter",
+          "fontSize": "24px",
+          "fontWeight": "700",
+          "letterSpacing": "0px",
+          "lineHeight": "1.2"
+        },
+        "body-lg": {
+          "fontFamily": "Inter",
+          "fontSize": "16px",
+          "fontWeight": "600",
+          "letterSpacing": "0px",
+          "lineHeight": "1.6"
+        },
+        "body-md": {
+          "fontFamily": "Inter",
+          "fontSize": "15px",
+          "fontWeight": "400",
+          "letterSpacing": "0px",
+          "lineHeight": "1.5"
+        },
+        "body-sm": {
+          "fontFamily": "Inter",
+          "fontSize": "13px",
+          "fontWeight": "400",
+          "letterSpacing": "0px",
+          "lineHeight": "1.5"
+        },
+        "label-lg": {
+          "fontFamily": "Inter",
+          "fontSize": "13px",
+          "fontWeight": "600",
+          "letterSpacing": "0px",
+          "lineHeight": "1.0"
+        },
+        "label-md": {
+          "fontFamily": "Inter",
+          "fontSize": "11px",
+          "fontWeight": "600",
+          "letterSpacing": "0.5px",
+          "lineHeight": "1.0"
+        },
+        "label-sm": {
+          "fontFamily": "Inter",
+          "fontSize": "10px",
+          "fontWeight": "700",
+          "letterSpacing": "1.5px",
+          "lineHeight": "1.0"
+        }
+      }
+    }
+  }
+}

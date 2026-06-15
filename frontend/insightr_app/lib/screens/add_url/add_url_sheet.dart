@@ -1,0 +1,194 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../core/theme.dart';
+import '../../core/widgets/pill_button.dart';
+import '../processing/processing_screen.dart';
+
+class AddUrlSheet extends StatefulWidget {
+  final void Function(int entryId) onProcessed;
+
+  const AddUrlSheet({super.key, required this.onProcessed});
+
+  @override
+  State<AddUrlSheet> createState() => _AddUrlSheetState();
+}
+
+class _AddUrlSheetState extends State<AddUrlSheet> {
+  final _controller = TextEditingController();
+  String _selectedPlatform = '';
+
+  Future<void> _process() async {
+    final url = _controller.text.trim();
+    if (url.isEmpty) return;
+
+    if (!mounted) return;
+    Navigator.pop(context); // Close sheet
+
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => ProcessingScreen(
+        url: url,
+        onCompleted: widget.onProcessed,
+      ),
+    ));
+  }
+
+  Future<void> _pasteFromClipboard() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (data?.text != null) {
+      setState(() => _controller.text = data!.text!);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xEB14140A),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border(top: BorderSide(color: Color(0x1AFFFFFF), width: 1)),
+      ),
+      padding: EdgeInsets.only(
+        left: 24, right: 24,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 40,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle
+          Center(child: Container(
+            width: 36, height: 4,
+            decoration: BoxDecoration(
+              color: const Color(0x33FFFFFF),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          )),
+          const SizedBox(height: 20),
+          Text('Add a Short', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text("We'll extract insights automatically", style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 20),
+          // URL Input
+          GestureDetector(
+            onTap: _pasteFromClipboard,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+              decoration: BoxDecoration(
+                color: const Color(0x0FFFFFFF),
+                borderRadius: InsightrRadii.fullAll,
+                border: Border.all(color: InsightrColors.borderGold, width: 1),
+              ),
+              child: Row(children: [
+                const Icon(Icons.link_rounded, size: 18, color: InsightrColors.goldMuted),
+                const SizedBox(width: 10),
+                Expanded(child: _controller.text.isEmpty
+                    ? Text('Paste URL here', style: GoogleFonts.inter(
+                        fontSize: 15, color: InsightrColors.textMuted,
+                      ))
+                    : Text(_controller.text, style: GoogleFonts.inter(
+                        fontSize: 15, color: InsightrColors.textPrimary,
+                      )),
+                ),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text('Instagram, TikTok or YouTube Short',
+            style: GoogleFonts.inter(fontSize: 12, color: InsightrColors.textMuted)),
+          const SizedBox(height: 14),
+          // Platform chips
+          Row(children: [
+            _PlatformChip(
+              label: 'Instagram', color: const Color(0xFFE91E8C),
+              isSelected: _selectedPlatform == 'Instagram',
+              onTap: () => setState(() => _selectedPlatform = 'Instagram'),
+            ),
+            const SizedBox(width: 10),
+            _PlatformChip(
+              label: 'TikTok', color: const Color(0xFF69C9D0),
+              isSelected: _selectedPlatform == 'TikTok',
+              onTap: () => setState(() => _selectedPlatform = 'TikTok'),
+            ),
+            const SizedBox(width: 10),
+            _PlatformChip(
+              label: 'YouTube', color: const Color(0xFFFF4444),
+              isSelected: _selectedPlatform == 'YouTube',
+              onTap: () => setState(() => _selectedPlatform = 'YouTube'),
+            ),
+          ]),
+          const SizedBox(height: 20),
+          // Also allow typing
+          TextField(
+            controller: _controller,
+            style: GoogleFonts.inter(fontSize: 15, color: InsightrColors.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Or type / paste URL manually',
+              hintStyle: GoogleFonts.inter(fontSize: 14, color: InsightrColors.textMuted),
+              filled: true,
+              fillColor: const Color(0x0AFFFFFF),
+              border: OutlineInputBorder(
+                borderRadius: InsightrRadii.lgAll,
+                borderSide: const BorderSide(color: Color(0x14FFFFFF)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: InsightrRadii.lgAll,
+                borderSide: const BorderSide(color: Color(0x14FFFFFF)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: InsightrRadii.lgAll,
+                borderSide: const BorderSide(color: InsightrColors.goldPrimary),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          PrimaryButton(
+            label: 'Process',
+            icon: const Icon(Icons.play_arrow_rounded, color: Color(0xFF1A1200), size: 18),
+            onTap: _process,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlatformChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _PlatformChip({
+    required this.label,
+    required this.color,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withAlpha(26) : const Color(0x0DFFFFFF),
+          borderRadius: InsightrRadii.fullAll,
+          border: Border.all(
+            color: isSelected ? color.withAlpha(102) : const Color(0x14FFFFFF), width: 1,
+          ),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          const SizedBox(width: 8),
+          Text(label, style: GoogleFonts.inter(
+            fontSize: 13, fontWeight: FontWeight.w500, color: InsightrColors.textPrimary,
+          )),
+        ]),
+      ),
+    );
+  }
+}
