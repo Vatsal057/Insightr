@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS entries (
     field                TEXT NOT NULL,
     content_type         TEXT NOT NULL DEFAULT 'general',
     type_specific_fields TEXT NOT NULL DEFAULT '[]',
+    hook                 TEXT NOT NULL DEFAULT '',
     summary              TEXT NOT NULL,
     key_points           TEXT NOT NULL,
     implementation_plan  TEXT NOT NULL DEFAULT '[]',
@@ -38,6 +39,7 @@ CREATE TABLE IF NOT EXISTS entries (
     explore_further      TEXT NOT NULL DEFAULT '[]',
     next_step            TEXT NOT NULL,
     keywords             TEXT NOT NULL DEFAULT '[]',
+    note_blocks          TEXT NOT NULL DEFAULT '[]',
     created_at           TEXT NOT NULL
 );
 
@@ -53,10 +55,12 @@ CREATE TABLE IF NOT EXISTS entry_tags (
 );
 
 CREATE TABLE IF NOT EXISTS action_items (
-    id       INTEGER PRIMARY KEY AUTOINCREMENT,
-    entry_id INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-    text     TEXT NOT NULL,
-    done     INTEGER NOT NULL DEFAULT 0
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    entry_id      INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+    text          TEXT NOT NULL,
+    done          INTEGER NOT NULL DEFAULT 0,
+    priority      TEXT NOT NULL DEFAULT 'soon',
+    time_estimate TEXT
 );
 
 CREATE TABLE IF NOT EXISTS claims (
@@ -117,6 +121,14 @@ MIGRATION_COLUMNS = [
     ("effort_estimation",    "TEXT"),
     ("missing_context",      "TEXT NOT NULL DEFAULT '[]'"),
     ("note_blocks",          "TEXT NOT NULL DEFAULT '[]'"),
+    # v2 additions
+    ("hook",                 "TEXT NOT NULL DEFAULT ''"),
+]
+
+# Migrations for child tables (action_items columns added post-launch)
+MIGRATION_ACTION_ITEMS_COLUMNS = [
+    ("priority",      "TEXT NOT NULL DEFAULT 'soon'"),
+    ("time_estimate", "TEXT"),
 ]
 
 
@@ -128,11 +140,17 @@ def get_connection(db_path: str) -> sqlite3.Connection:
 
 
 def _migrate(conn: sqlite3.Connection) -> None:
-    # 1. Standard table migrations
+    # 1. Standard entries table migrations
     existing = {row["name"] for row in conn.execute("PRAGMA table_info(entries)")}
     for col_name, col_def in MIGRATION_COLUMNS:
         if col_name not in existing:
             conn.execute(f"ALTER TABLE entries ADD COLUMN {col_name} {col_def}")
+
+    # 2. action_items table migrations
+    existing_ai = {row["name"] for row in conn.execute("PRAGMA table_info(action_items)")}
+    for col_name, col_def in MIGRATION_ACTION_ITEMS_COLUMNS:
+        if col_name not in existing_ai:
+            conn.execute(f"ALTER TABLE action_items ADD COLUMN {col_name} {col_def}")
     
     # 2. FTS migration — FTS5 doesn't support ALTER TABLE. 
     # Check if action_items_text exists in the virtual table. 
@@ -198,12 +216,12 @@ def save_entry(db_path: str, entry: KnowledgeEntry) -> int:
             """
             INSERT INTO entries (
                 title, source_url, field, content_type, type_specific_fields,
-                summary, key_points,
+                hook, summary, key_points,
                 implementation_plan, tools_resources, rabbit_hole,
                 referenced_artifacts, topic_map,
                 effort_estimation, missing_context,
                 explore_further, next_step, keywords, note_blocks, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 entry.title,
@@ -211,6 +229,7 @@ def save_entry(db_path: str, entry: KnowledgeEntry) -> int:
                 entry.field,
                 entry.content_type,
                 json.dumps([f.model_dump() for f in entry.type_specific_fields]),
+                entry.hook,
                 entry.summary.model_dump_json(),
                 entry.key_points,
                 json.dumps([s.model_dump() for s in entry.implementation_plan]),
@@ -238,8 +257,8 @@ def save_entry(db_path: str, entry: KnowledgeEntry) -> int:
 
         for item in entry.action_items:
             conn.execute(
-                "INSERT INTO action_items (entry_id, text, done) VALUES (?, ?, ?)",
-                (entry_id, item.text, int(item.done)),
+                "INSERT INTO action_items (entry_id, text, done, priority, time_estimate) VALUES (?, ?, ?, ?, ?)",
+                (entry_id, item.text, int(item.done), item.priority, item.time_estimate),
             )
 
         for claim in entry.claims:
@@ -302,9 +321,17 @@ def _row_to_entry(conn: sqlite3.Connection, row: sqlite3.Row) -> KnowledgeEntry:
     ]
 
     action_items = [
-        {"text": r["text"], "done": bool(r["done"])}
+        {
+            "text": r["text"],
+            "done": bool(r["done"]),
+            "priority": r["priority"] if "priority" in r.keys() else "soon",
+            "time_estimate": r["time_estimate"] if "time_estimate" in r.keys() else None,
+        }
         for r in conn.execute(
-            "SELECT text, done FROM action_items WHERE entry_id = ? ORDER BY id", (entry_id,)
+            """SELECT text, done, priority, time_estimate FROM action_items
+               WHERE entry_id = ?
+               ORDER BY CASE priority WHEN 'now' THEN 0 WHEN 'soon' THEN 1 WHEN 'someday' THEN 2 ELSE 1 END, id ASC""",
+            (entry_id,),
         )
     ]
 
@@ -371,6 +398,8 @@ def _row_to_entry(conn: sqlite3.Connection, row: sqlite3.Row) -> KnowledgeEntry:
         for b in _parse_json(row["note_blocks"] if "note_blocks" in row.keys() else None, [])
     ]
 
+    hook = row["hook"] if "hook" in row.keys() else ""
+
     return KnowledgeEntry(
         title=row["title"],
         source_url=row["source_url"],
@@ -378,6 +407,7 @@ def _row_to_entry(conn: sqlite3.Connection, row: sqlite3.Row) -> KnowledgeEntry:
         tags=tags,
         content_type=row["content_type"],
         type_specific_fields=[TypeSpecificField(**f) for f in _parse_json(row["type_specific_fields"], [])],
+        hook=hook,
         summary=json.loads(row["summary"]),
         key_points=row["key_points"],
         action_items=action_items,
@@ -477,16 +507,21 @@ def search_entries(db_path: str, query: str, tag: Optional[str] = None,
 def list_action_items(db_path: str, done: Optional[bool] = None) -> List[sqlite3.Row]:
     conn = get_connection(db_path)
     try:
-        sql = """
-            SELECT a.id, a.text, a.done, e.id as entry_id, e.title
+        base = """
+            SELECT a.id, a.text, a.done, a.priority, a.time_estimate,
+                   e.id as entry_id, e.title
             FROM action_items a JOIN entries e ON e.id = a.entry_id
         """
         params: list = []
+        where = " WHERE a.done = ?" if done is not None else ""
         if done is not None:
-            sql += " WHERE a.done = ?"
             params.append(int(done))
-        sql += " ORDER BY a.entry_id DESC, a.id"
-        return conn.execute(sql, params).fetchall()
+        order = """
+            ORDER BY
+                CASE a.priority WHEN 'now' THEN 0 WHEN 'soon' THEN 1 WHEN 'someday' THEN 2 ELSE 1 END,
+                a.entry_id DESC, a.id
+        """
+        return conn.execute(base + where + order, params).fetchall()
     finally:
         conn.close()
 

@@ -79,10 +79,36 @@ def extract_smart_keyframes(video_path: str, max_frames: int = 12) -> list[dict]
             if all(abs(f - s) > min_frame_dist for s in selected_indices):
                 selected_indices.append(f)
 
+    # --- Gap-fill pass: catch static text slides that don't trigger scene changes ---
+    # If there are long stretches with no selected frame, a text slide could
+    # sit on screen for 5-10 seconds and be completely invisible to the LLM.
+    # We add one uniform sample per uncovered window of > 3 seconds.
+    total_frames = max((d[0] for d in diffs), default=0)
+    GAP_FRAMES = int(fps * 3.0)  # flag any gap longer than 3 seconds
+
+    selected_indices.sort()
+    # Build coverage windows from selected frames
+    sentinel = [-1] + selected_indices + [total_frames + 1]
+    gap_fills = []
+    for i in range(1, len(sentinel)):
+        gap_start = sentinel[i - 1] + 1
+        gap_end = sentinel[i] - 1
+        gap_size = gap_end - gap_start
+        if gap_size >= GAP_FRAMES:
+            # Place a sample in the middle of the gap
+            mid = gap_start + gap_size // 2
+            gap_fills.append(mid)
+    selected_indices.extend(gap_fills)
+    # Honour the max_frames cap after gap-filling
+    if len(selected_indices) > max_frames:
+        # Keep a uniform spread — prioritise scene-change peaks already in list
+        # (they were added first), drop gap-fills that push us over the limit
+        selected_indices = selected_indices[:max_frames]
+
     selected_indices.sort()
 
     # --- Pass 3: High-Quality Extraction ---
-    # We reset and read sequentially again. Seeking (cap.set) is notoriously 
+    # We reset and read sequentially again. Seeking (cap.set) is notoriously
     # unreliable in many OpenCV/FFmpeg builds for certain MP4 encodings.
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
     result = []
