@@ -359,7 +359,7 @@ private fun EntryContent(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(start = 24.dp, vertical = 4.dp)
+                                            .padding(24.dp, 4.dp, 0.dp, 4.dp)
                                     ) {
                                         Text(
                                             text = "\u2022 ${action.text}",
@@ -571,7 +571,7 @@ private fun EntryContent(
                                     text = "\u2022 $q",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = InsightrColors.TextSecondary,
-                                    modifier = Modifier.padding(start = 8.dp, vertical = 2.dp)
+                                    modifier = Modifier.padding(8.dp, 2.dp, 0.dp, 2.dp)
                                 )
                             }
                         }
@@ -588,7 +588,7 @@ private fun EntryContent(
                                     text = "\u2022 $gap",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = InsightrColors.TextSecondary,
-                                    modifier = Modifier.padding(start = 8.dp, vertical = 2.dp)
+                                    modifier = Modifier.padding(8.dp, 2.dp, 0.dp, 2.dp)
                                 )
                             }
                         }
