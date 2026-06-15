@@ -89,13 +89,32 @@ async def register_zeroconf():
     return info
 
 
+async def udp_broadcaster():
+    ip = get_ip()
+    port = 8000
+    message = f"INSIGHTR_BACKEND|{ip}|{port}".encode('utf-8')
+    
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    
+    print(f"[*] Starting UDP broadcast at 255.255.255.255:8888 with message: {message}")
+    while True:
+        try:
+            sock.sendto(message, ('255.255.255.255', 8888))
+        except Exception as e:
+            print(f"UDP broadcast failed: {e}")
+        await asyncio.sleep(2)
+
 @app.on_event("startup")
 async def startup_event():
     app.state.zc_info = await register_zeroconf()
+    app.state.udp_task = asyncio.create_task(udp_broadcaster())
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
+    if hasattr(app.state, "udp_task"):
+        app.state.udp_task.cancel()
     if async_zc and hasattr(app.state, "zc_info") and app.state.zc_info:
         await async_zc.async_unregister_service(app.state.zc_info)
         await async_zc.close()

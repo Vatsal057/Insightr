@@ -21,6 +21,8 @@ class Summary(BaseModel):
 
 
 class ActionItem(BaseModel):
+    id: Optional[int] = None
+    entry_id: Optional[int] = None
     text: str
     done: bool = False
     priority: Literal["now", "soon", "someday"] = "soon"

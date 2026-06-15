@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:multicast_dns/multicast_dns.dart';
 
@@ -35,6 +37,46 @@ class ApiService {
   String _base = AppConstants.baseUrl;
 
   Future<void> initialize() async {
+    // Attempt UDP broadcast discovery
+    try {
+      final udpSocket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 8888);
+      udpSocket.broadcastEnabled = true;
+      print('Listening for UDP broadcasts on port 8888...');
+      
+      bool found = false;
+
+      final discoveryFuture = udpSocket.firstWhere((RawSocketEvent event) {
+        if (event == RawSocketEvent.read) {
+          final datagram = udpSocket.receive();
+          if (datagram != null) {
+            final message = utf8.decode(datagram.data);
+            if (message.startsWith('INSIGHTR_BACKEND|')) {
+              final parts = message.split('|');
+              if (parts.length >= 3) {
+                final ip = parts[1];
+                final port = parts[2];
+                _base = 'http://$ip:$port';
+                print('Found Insightr Backend via UDP at $_base');
+                found = true;
+                return true;
+              }
+            }
+          }
+        }
+        return false;
+      }).timeout(const Duration(seconds: 3));
+
+      await discoveryFuture;
+      udpSocket.close();
+      if (found) return;
+    } catch (e) {
+      if (e is TimeoutException) {
+        print('UDP discovery timed out, falling back to mDNS');
+      } else {
+        print('UDP discovery failed: $e');
+      }
+    }
+
     try {
       final MDnsClient client = MDnsClient();
       await client.start();
@@ -66,7 +108,7 @@ class ApiService {
 
   Future<dynamic> _get(String path, {Map<String, String>? params}) async {
     final uri = Uri.parse('$_base$path').replace(queryParameters: params);
-    final response = await _client.get(uri, headers: _jsonHeaders);
+    final response = await _client.get(uri, headers: _jsonHeaders).timeout(const Duration(seconds: 5));
     if (response.statusCode >= 400) {
       throw ApiException(response.statusCode, response.body);
     }
@@ -79,7 +121,7 @@ class ApiService {
       uri,
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: formData,
-    );
+    ).timeout(const Duration(seconds: 5));
     if (response.statusCode >= 400) {
       throw ApiException(response.statusCode, response.body);
     }

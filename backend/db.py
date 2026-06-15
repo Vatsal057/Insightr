@@ -322,13 +322,15 @@ def _row_to_entry(conn: sqlite3.Connection, row: sqlite3.Row) -> KnowledgeEntry:
 
     action_items = [
         {
+            "id": r["id"],
+            "entry_id": entry_id,
             "text": r["text"],
             "done": bool(r["done"]),
             "priority": r["priority"] if "priority" in r.keys() else "soon",
             "time_estimate": r["time_estimate"] if "time_estimate" in r.keys() else None,
         }
         for r in conn.execute(
-            """SELECT text, done, priority, time_estimate FROM action_items
+            """SELECT id, text, done, priority, time_estimate FROM action_items
                WHERE entry_id = ?
                ORDER BY CASE priority WHEN 'now' THEN 0 WHEN 'soon' THEN 1 WHEN 'someday' THEN 2 ELSE 1 END, id ASC""",
             (entry_id,),

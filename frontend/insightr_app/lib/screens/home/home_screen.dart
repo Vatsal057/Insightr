@@ -124,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Expanded(child: _loading
             ? const Center(child: CircularProgressIndicator(color: InsightrColors.goldPrimary))
             : _error != null
-                ? _ErrorState(onRetry: _loadFeed)
+                ? _ErrorState(error: _error!, onRetry: _loadFeed)
                 : _filteredCards.isEmpty
                     ? _EmptyState(filter: _activeFilter)
                     : RefreshIndicator(
@@ -293,30 +293,37 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
+  final String error;
   final VoidCallback onRetry;
-  const _ErrorState({required this.onRetry});
+  const _ErrorState({required this.error, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
-    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      Container(
-        width: 80, height: 80,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: const Color(0x14E05C4A),
-          border: Border.all(color: const Color(0x40E05C4A), width: 1),
+    return Center(child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 40),
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Container(
+          width: 80, height: 80,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: const Color(0x14E05C4A),
+            border: Border.all(color: const Color(0x40E05C4A), width: 1),
+          ),
+          child: const Icon(Icons.wifi_off_rounded, size: 32, color: InsightrColors.red),
         ),
-        child: const Icon(Icons.wifi_off_rounded, size: 32, color: InsightrColors.red),
-      ),
-      const SizedBox(height: 16),
-      Text('Backend unreachable', style: GoogleFonts.inter(
-        fontSize: 20, fontWeight: FontWeight.w700,
-      )),
-      const SizedBox(height: 8),
-      Text('Make sure the backend is running\non port 8000', style: GoogleFonts.inter(
-        fontSize: 14, color: InsightrColors.textSecondary,
-      ), textAlign: TextAlign.center),
-      const SizedBox(height: 24),
+        const SizedBox(height: 16),
+        Text('Backend unreachable', style: GoogleFonts.inter(
+          fontSize: 20, fontWeight: FontWeight.w700,
+        )),
+        const SizedBox(height: 8),
+        Text(error, style: GoogleFonts.inter(
+          fontSize: 12, color: InsightrColors.red.withOpacity(0.7), fontStyle: FontStyle.italic,
+        ), textAlign: TextAlign.center),
+        const SizedBox(height: 8),
+        Text('Make sure the backend is running\non port 8000', style: GoogleFonts.inter(
+          fontSize: 14, color: InsightrColors.textSecondary,
+        ), textAlign: TextAlign.center),
+        const SizedBox(height: 24),
       GestureDetector(
         onTap: onRetry,
         child: Container(
@@ -331,6 +338,6 @@ class _ErrorState extends StatelessWidget {
           )),
         ),
       ),
-    ]));
+    ])));
   }
 }

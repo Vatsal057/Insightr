@@ -311,6 +311,9 @@ def _format_timeline(timeline: list[TimelineEntry]) -> str:
     return "\n".join(f"[{entry.timestamp}] {entry.text}" for entry in timeline)
 
 
+import time
+import random
+
 def extract_knowledge(
     transcript_timeline: list[TimelineEntry],
     ocr_timeline: list[TimelineEntry],
@@ -323,38 +326,51 @@ def extract_knowledge(
     Sends timelines, keyframes, and metadata to Gemini and returns a
     validated KnowledgeEntry with all 12 insight features populated.
     """
-    try:
-        client = genai.Client(api_key=api_key)
+    client = genai.Client(api_key=api_key)
 
-        parts = []
-        for frame in frames:
-            frame_b64 = frame["image_b64"] if isinstance(frame, dict) else frame
-            parts.append(types.Part.from_bytes(
-                data=base64.b64decode(frame_b64),
-                mime_type="image/jpeg",
-            ))
+    parts = []
+    for frame in frames:
+        frame_b64 = frame["image_b64"] if isinstance(frame, dict) else frame
+        parts.append(types.Part.from_bytes(
+            data=base64.b64decode(frame_b64),
+            mime_type="image/jpeg",
+        ))
 
-        prompt = EXTRACTION_PROMPT.format(
-            metadata=json.dumps(metadata, indent=2),
-            transcript_timeline=_format_timeline(transcript_timeline),
-            ocr_timeline=_format_timeline(ocr_timeline),
-            content_types=prompt_reference(),
-        )
-        parts.append(types.Part.from_text(text=prompt))
+    prompt = EXTRACTION_PROMPT.format(
+        metadata=json.dumps(metadata, indent=2),
+        transcript_timeline=_format_timeline(transcript_timeline),
+        ocr_timeline=_format_timeline(ocr_timeline),
+        content_types=prompt_reference(),
+    )
+    parts.append(types.Part.from_text(text=prompt))
 
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=parts,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=GEMINI_RESPONSE_SCHEMA,
-            ),
-        )
+    max_retries = 3
+    base_delay = 5  # seconds
 
-        data = json.loads(response.text)
-        data["source_url"] = source_url
+    for attempt in range(max_retries + 1):
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=parts,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=GEMINI_RESPONSE_SCHEMA,
+                ),
+            )
 
-        return KnowledgeEntry(**data)
+            data = json.loads(response.text)
+            data["source_url"] = source_url
 
-    except Exception as e:
-        raise RuntimeError(f"Gemini API call failed: {e}")
+            return KnowledgeEntry(**data)
+
+        except Exception as e:
+            error_str = str(e)
+            is_unavailable = "503" in error_str or "UNAVAILABLE" in error_str.upper()
+            
+            if is_unavailable and attempt < max_retries:
+                delay = (base_delay * (2 ** attempt)) + random.uniform(0, 1)
+                print(f"  [!] Gemini is busy (503). Retrying in {delay:.1f}s... (Attempt {attempt + 1}/{max_retries})")
+                time.sleep(delay)
+                continue
+            
+            raise RuntimeError(f"Gemini API call failed: {e}")
