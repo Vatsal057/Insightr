@@ -7,6 +7,7 @@ import '../../core/widgets/tag_chip.dart';
 import '../../models/entry.dart';
 import '../../services/api_service.dart';
 import 'deep_insight_screen.dart';
+import 'topic_map_screen.dart';
 
 class InsightDetailScreen extends StatefulWidget {
   final int entryId;
@@ -268,6 +269,40 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
                     .toList()),
                 const SizedBox(height: 16),
               ],
+
+              // ── Topic Map section ──────────────────────────────────────────
+              Text('TOPIC MAP', style: GoogleFonts.inter(
+                fontSize: 10, fontWeight: FontWeight.w700,
+                letterSpacing: 1.5, color: InsightrColors.goldMuted,
+              )),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () => Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => TopicMapScreen(
+                    centralTopic: _entry!.title,
+                    relatedTopics: _entry!.tags,
+                  ),
+                )),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0x0AFFFFFF),
+                    borderRadius: InsightrRadii.xlAll,
+                    border: Border.all(color: const Color(0x14FFFFFF), width: 1),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.hub_rounded, color: InsightrColors.goldPrimary, size: 32),
+                      const SizedBox(height: 12),
+                      Text('Explore Topic Map', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+                      Text('See how this connects to your vault', style: GoogleFonts.inter(fontSize: 12, color: InsightrColors.textSecondary)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
 
               // ── GO DEEPER button ──────────────────────────────────────────
               GestureDetector(

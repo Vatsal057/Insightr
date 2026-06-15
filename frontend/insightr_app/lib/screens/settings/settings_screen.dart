@@ -102,12 +102,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _SectionLabel('INTEGRATIONS'),
           _SettingsGroup(children: [
             _SettingsRow(
-              icon: Icons.extension_rounded,
-              label: 'Notion API Key',
-              value: 'Not connected',
-              onTap: () {},
-            ),
-            _SettingsRow(
               icon: Icons.output_rounded,
               label: 'Default Export Format',
               value: 'Markdown',

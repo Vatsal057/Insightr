@@ -151,9 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: InsightrColors.bgDark,
       body: SafeArea(bottom: false, child: _buildBody()),
       floatingActionButton: _navIndex == 0
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 80),
-              child: InsightrFab(onPressed: () {
+          ? InsightrFab(onPressed: () {
                 showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
@@ -164,8 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ));
                   }),
                 );
-              }),
-            )
+              })
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: SafeArea(

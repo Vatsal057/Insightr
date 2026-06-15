@@ -46,7 +46,25 @@ class _ActionItemsScreenState extends State<ActionItemsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    return Scaffold(
+      backgroundColor: InsightrColors.bgDark,
+      appBar: AppBar(
+        backgroundColor: InsightrColors.bgDark,
+        leading: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            margin: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0x12FFFFFF),
+              border: Border.all(color: const Color(0x1AFFFFFF), width: 1),
+            ),
+            child: const Icon(Icons.arrow_back_rounded, size: 16),
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       // Header
       Padding(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -103,7 +121,8 @@ class _ActionItemsScreenState extends State<ActionItemsScreen> {
                 ),
               ),
       ),
-    ]);
+    ]),
+    ));
   }
 }
 
@@ -207,14 +226,20 @@ class _EmptyState extends StatelessWidget {
             color: const Color(0x0AFFFFFF),
             border: Border.all(color: const Color(0x14FFFFFF), width: 1),
           ),
-          child: const Icon(Icons.task_alt_rounded, size: 32, color: InsightrColors.textMuted),
+          child: const Icon(Icons.check_circle_rounded, size: 32, color: InsightrColors.goldPrimary),
         ),
-        const SizedBox(height: 16),
-        Text('All clear!', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        Text('No pending actions right now', style: GoogleFonts.inter(
-          fontSize: 14, color: InsightrColors.textSecondary,
-        )),
+        const SizedBox(height: 24),
+        Text('All Caught Up!', style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Text("You've completed all your pending action items. Time to learn something new.",
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 15, color: InsightrColors.textSecondary, height: 1.5,
+            ),
+          ),
+        ),
       ]),
     ));
   }

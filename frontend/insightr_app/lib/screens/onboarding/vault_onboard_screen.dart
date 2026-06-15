@@ -28,12 +28,13 @@ class VaultOnboardScreen extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Column(
-              children: [
-                const SizedBox(height: 50),
-                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28),
+              child: Column(
+                children: [
+                  const SizedBox(height: 50),
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Container(
                     width: 44, height: 44,
                     decoration: BoxDecoration(
@@ -103,7 +104,7 @@ class VaultOnboardScreen extends StatelessWidget {
                     const _VaultRow(title: 'Habit Stacking Explained', tag: 'Self-growth', date: '2 days ago'),
                   ]),
                 ),
-                const Spacer(),
+                const SizedBox(height: 40),
                 PrimaryButton(label: 'Start Building My Vault', onTap: _complete),
                 const SizedBox(height: 16),
                 GestureDetector(
@@ -123,6 +124,7 @@ class VaultOnboardScreen extends StatelessWidget {
             ),
           ),
         ),
+      ),
       ),
     );
   }

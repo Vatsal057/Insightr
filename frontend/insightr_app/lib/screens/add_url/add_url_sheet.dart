@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme.dart';
+import 'dart:ui';
 import '../../core/widgets/pill_button.dart';
 import '../processing/processing_screen.dart';
 
@@ -42,12 +43,15 @@ class _AddUrlSheetState extends State<AddUrlSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xEB14140A),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: Color(0x1AFFFFFF), width: 1)),
-      ),
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Color(0xCC14140A),
+            border: Border(top: BorderSide(color: Color(0x1AFFFFFF), width: 1)),
+          ),
       padding: EdgeInsets.only(
         left: 24, right: 24,
         top: 16,
@@ -150,7 +154,8 @@ class _AddUrlSheetState extends State<AddUrlSheet> {
           ),
         ],
       ),
-    );
+    ),
+  ));
   }
 }
 

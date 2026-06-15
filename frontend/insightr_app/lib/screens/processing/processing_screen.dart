@@ -25,9 +25,6 @@ class _ProcessingScreenState extends State<ProcessingScreen>
   bool _failed = false;
   String? _errorMsg;
 
-  late AnimationController _pulseCtrl;
-  late Animation<double> _pulse;
-
   final _steps = [
     ('Downloading', 'Fetching video source'),
     ('Transcribing audio', 'Speech-to-text model'),
@@ -39,18 +36,12 @@ class _ProcessingScreenState extends State<ProcessingScreen>
   @override
   void initState() {
     super.initState();
-    _pulseCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))
-      ..repeat(reverse: true);
-    _pulse = Tween(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
     _startProcessing();
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    _pulseCtrl.dispose();
     super.dispose();
   }
 
@@ -116,39 +107,55 @@ class _ProcessingScreenState extends State<ProcessingScreen>
     return Column(
       children: [
         const SizedBox(height: 60),
-        // Animated concentric circles + icon
-        ScaleTransition(
-          scale: _pulse,
-          child: SizedBox(
-            width: 140, height: 140,
-            child: Stack(alignment: Alignment.center, children: [
+        // Circular progress + icon
+        SizedBox(
+          width: 180, height: 180,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 180, height: 180,
+                child: CircularProgressIndicator(
+                  value: 1.0,
+                  strokeWidth: 6,
+                  color: const Color(0x0DFFFFFF),
+                ),
+              ),
+              SizedBox(
+                width: 180, height: 180,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: _progress),
+                  duration: const Duration(milliseconds: 500),
+                  builder: (context, value, child) => CircularProgressIndicator(
+                    value: value,
+                    strokeWidth: 6,
+                    color: InsightrColors.goldPrimary,
+                    strokeCap: StrokeCap.round,
+                  ),
+                ),
+              ),
               Container(
-                width: 140, height: 140,
+                width: 80, height: 80,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Color(0x26C9A84C),
+                  color: Color(0x1AC9A84C),
+                ),
+                child: Center(
+                  child: Container(
+                    width: 56, height: 56,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: InsightrColors.goldPrimary,
+                      boxShadow: [BoxShadow(
+                        color: InsightrColors.goldPrimary.withAlpha(128),
+                        blurRadius: 32,
+                      )],
+                    ),
+                    child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF2A230C), size: 28),
+                  ),
                 ),
               ),
-              Container(
-                width: 100, height: 100,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0x33C9A84C),
-                ),
-              ),
-              Container(
-                width: 56, height: 56,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: InsightrColors.goldPrimary,
-                  boxShadow: [BoxShadow(
-                    color: InsightrColors.goldPrimary.withAlpha(128),
-                    blurRadius: 32,
-                  )],
-                ),
-                child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF2A230C), size: 28),
-              ),
-            ]),
+            ],
           ),
         ),
         const SizedBox(height: 32),
