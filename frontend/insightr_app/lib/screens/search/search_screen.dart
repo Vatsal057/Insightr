@@ -20,6 +20,12 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _loading = false;
   bool _hasSearched = false;
 
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   Future<void> _search(String q) async {
     if (q.trim().isEmpty) {
       setState(() { _results = []; _hasSearched = false; });

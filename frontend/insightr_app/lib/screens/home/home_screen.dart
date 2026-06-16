@@ -178,6 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   isScrollControlled: true,
                   backgroundColor: Colors.transparent,
                   builder: (_) => AddUrlSheet(onProcessed: (id) {
+                    _loadFeed(); // Refresh so the new entry appears in the feed
                     Navigator.push(context, MaterialPageRoute(
                       builder: (_) => InsightDetailScreen(entryId: id),
                     ));
@@ -191,8 +192,8 @@ class _HomeScreenState extends State<HomeScreen> {
           currentIndex: _navIndex,
           onTap: (i) {
             setState(() => _navIndex = i);
-            // Refresh pending count when switching away from Actions tab
-            if (i != 2) _loadPendingCount();
+            // Always refresh pending count when switching tabs so the badge stays accurate
+            _loadPendingCount();
           },
           pendingCount: _pendingActionCount,
         ),

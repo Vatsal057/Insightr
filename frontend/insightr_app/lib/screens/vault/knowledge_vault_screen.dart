@@ -26,6 +26,7 @@ class _KnowledgeVaultScreenState extends State<KnowledgeVaultScreen>
   bool _loadingConcepts = true;
   bool _loadingCollections = true;
   String _conceptFilter = 'all';
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -38,13 +39,17 @@ class _KnowledgeVaultScreenState extends State<KnowledgeVaultScreen>
   @override
   void dispose() {
     _tabs.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadConcepts({String? type}) async {
+  Future<void> _loadConcepts({String? type, String? query}) async {
     setState(() => _loadingConcepts = true);
     try {
-      final c = await _api.getConcepts(conceptType: type == 'all' ? null : type);
+      final c = await _api.getConcepts(
+        conceptType: type == 'all' ? null : type,
+        query: (query?.trim().isEmpty ?? true) ? null : query?.trim(),
+      );
       setState(() { _concepts = c; _loadingConcepts = false; });
     } catch (_) {
       setState(() => _loadingConcepts = false);
@@ -95,6 +100,11 @@ class _KnowledgeVaultScreenState extends State<KnowledgeVaultScreen>
             const SizedBox(width: 10),
             Expanded(
               child: TextField(
+                controller: _searchController,
+                onChanged: (q) => _loadConcepts(
+                  type: _conceptFilter,
+                  query: q,
+                ),
                 style: GoogleFonts.inter(fontSize: 14, color: InsightrColors.textPrimary),
                 decoration: InputDecoration(
                   hintText: 'Search vault...',
@@ -142,7 +152,7 @@ class _KnowledgeVaultScreenState extends State<KnowledgeVaultScreen>
           filter: _conceptFilter,
           onFilter: (t) {
             setState(() => _conceptFilter = t);
-            _loadConcepts(type: t);
+            _loadConcepts(type: t, query: _searchController.text);
           },
           onTap: (c) => Navigator.push(context, MaterialPageRoute(
             builder: (_) => ConceptDetailScreen(concept: c),
@@ -272,43 +282,50 @@ class _CollectionsTab extends StatelessWidget {
         : RefreshIndicator(
             color: InsightrColors.goldPrimary,
             onRefresh: onRefresh,
-            child: Column(children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                child: Row(children: [
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0x1FC9A84C),
-                      borderRadius: InsightrRadii.fullAll,
-                      border: Border.all(color: InsightrColors.borderGold, width: 1),
-                    ),
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                     child: Row(children: [
-                      const Icon(Icons.add_rounded, size: 16, color: InsightrColors.goldPrimary),
-                      const SizedBox(width: 6),
-                      Text('New Collection', style: GoogleFonts.inter(
-                        fontSize: 12, fontWeight: FontWeight.w700, color: InsightrColors.goldPrimary,
-                      )),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0x1FC9A84C),
+                          borderRadius: InsightrRadii.fullAll,
+                          border: Border.all(color: InsightrColors.borderGold, width: 1),
+                        ),
+                        child: Row(children: [
+                          const Icon(Icons.add_rounded, size: 16, color: InsightrColors.goldPrimary),
+                          const SizedBox(width: 6),
+                          Text('New Collection', style: GoogleFonts.inter(
+                            fontSize: 12, fontWeight: FontWeight.w700, color: InsightrColors.goldPrimary,
+                          )),
+                        ]),
+                      ),
                     ]),
                   ),
-                ]),
-              ),
-              Expanded(
-                child: GridView.builder(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 160),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.1,
-              ),
-              itemCount: collections.length,
-              itemBuilder: (_, i) => _CollectionCard(
-                collection: collections[i],
-                onTap: () => onTap(collections[i]),
-              ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 160),
+                  sliver: SliverGrid(
+                    delegate: SliverChildBuilderDelegate(
+                      (_, i) => _CollectionCard(
+                        collection: collections[i],
+                        onTap: () => onTap(collections[i]),
+                      ),
+                      childCount: collections.length,
+                    ),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2, crossAxisSpacing: 12,
+                      mainAxisSpacing: 12, childAspectRatio: 1.1,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ]),
-      );
+          );
   }
 }
 

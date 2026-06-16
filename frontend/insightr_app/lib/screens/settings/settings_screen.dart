@@ -115,51 +115,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showPicker(
-    BuildContext context, String title, List<String> options,
-    String current, void Function(String) onSelect,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        decoration: BoxDecoration(
-          color: const Color(0xEB14140A),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          border: const Border(top: BorderSide(color: Color(0x1AFFFFFF), width: 1)),
-        ),
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Center(child: Container(
-            width: 36, height: 4,
-            decoration: BoxDecoration(color: const Color(0x33FFFFFF), borderRadius: BorderRadius.circular(2)),
-          )),
-          const SizedBox(height: 20),
-          Text(title, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 16),
-          ...options.map((o) => GestureDetector(
-            onTap: () { onSelect(o); Navigator.pop(context); },
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                color: o == current ? const Color(0x1FC9A84C) : const Color(0x0AFFFFFF),
-                borderRadius: InsightrRadii.lgAll,
-                border: Border.all(
-                  color: o == current ? InsightrColors.borderGold : const Color(0x14FFFFFF), width: 1,
-                ),
-              ),
-              child: Row(children: [
-                Expanded(child: Text(o, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w500))),
-                if (o == current) const Icon(Icons.check_rounded, size: 16, color: InsightrColors.goldPrimary),
-              ]),
-            ),
-          )),
-        ]),
-      ),
-    );
-  }
 
   void _showConfirm(
     BuildContext context, {

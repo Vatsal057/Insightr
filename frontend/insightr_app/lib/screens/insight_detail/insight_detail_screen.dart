@@ -398,11 +398,23 @@ class _ActionItemsSection extends StatefulWidget {
 
 class _ActionItemsSectionState extends State<_ActionItemsSection> {
   late final List<bool> _checked;
+  final _api = ApiService();
 
   @override
   void initState() {
     super.initState();
     _checked = widget.items.map((a) => a.done).toList();
+  }
+
+  Future<void> _toggle(int i) async {
+    final newDone = !_checked[i];
+    setState(() => _checked[i] = newDone);
+    try {
+      await _api.toggleTodo(widget.items[i].id, done: newDone);
+    } catch (_) {
+      // Revert on failure
+      if (mounted) setState(() => _checked[i] = !newDone);
+    }
   }
 
   static const _priorityColors = {
@@ -448,7 +460,7 @@ class _ActionItemsSectionState extends State<_ActionItemsSection> {
           final pColor = _priorityColors[item.priority] ?? InsightrColors.textSecondary;
           final pLabel = _priorityLabels[item.priority] ?? item.priority.toUpperCase();
           return GestureDetector(
-            onTap: () => setState(() => _checked[i] = !_checked[i]),
+            onTap: () => _toggle(i),
             behavior: HitTestBehavior.opaque,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),

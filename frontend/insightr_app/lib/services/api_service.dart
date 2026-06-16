@@ -270,7 +270,7 @@ class ApiService {
 
   /// Export the entire vault as Markdown — GET /api/export?format=markdown
   Future<String> exportVault() async {
-    final uri = Uri.parse('\$_base\${AppConstants.exportEndpoint}')
+    final uri = Uri.parse('$_base${AppConstants.exportEndpoint}')
         .replace(queryParameters: {'format': 'markdown'});
     final response = await _client.get(uri).timeout(const Duration(seconds: 30));
     if (response.statusCode >= 400) {

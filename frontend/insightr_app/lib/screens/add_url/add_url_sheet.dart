@@ -19,6 +19,12 @@ class _AddUrlSheetState extends State<AddUrlSheet> {
   final _controller = TextEditingController();
   String _selectedPlatform = '';
 
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   Future<void> _process() async {
     final url = _controller.text.trim();
     if (url.isEmpty) return;
@@ -88,13 +94,22 @@ class _AddUrlSheetState extends State<AddUrlSheet> {
                 const Icon(Icons.link_rounded, size: 18, color: InsightrColors.goldMuted),
                 const SizedBox(width: 10),
                 Expanded(child: _controller.text.isEmpty
-                    ? Text('Paste URL here', style: GoogleFonts.inter(
+                    ? Text('Tap to paste URL', style: GoogleFonts.inter(
                         fontSize: 15, color: InsightrColors.textMuted,
                       ))
-                    : Text(_controller.text, style: GoogleFonts.inter(
-                        fontSize: 15, color: InsightrColors.textPrimary,
-                      )),
+                    : Text(_controller.text,
+                        style: GoogleFonts.inter(
+                          fontSize: 15, color: InsightrColors.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                 ),
+                if (_controller.text.isNotEmpty)
+                  GestureDetector(
+                    onTap: () => setState(() => _controller.clear()),
+                    child: const Icon(Icons.close_rounded, size: 16, color: InsightrColors.textMuted),
+                  ),
               ]),
             ),
           ),
@@ -126,6 +141,7 @@ class _AddUrlSheetState extends State<AddUrlSheet> {
           // Also allow typing
           TextField(
             controller: _controller,
+            onChanged: (_) => setState(() {}),
             style: GoogleFonts.inter(fontSize: 15, color: InsightrColors.textPrimary),
             decoration: InputDecoration(
               hintText: 'Or type / paste URL manually',
