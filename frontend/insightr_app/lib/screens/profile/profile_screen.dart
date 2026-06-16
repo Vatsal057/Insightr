@@ -1,12 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme.dart';
+import '../../services/api_service.dart';
 import '../settings/settings_screen.dart';
 import '../settings/export_screen.dart';
 import '../actions/action_items_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final _api = ApiService();
+  int _insightCount = 0;
+  int _actionCount = 0;
+  int _conceptCount = 0;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final results = await Future.wait([
+        _api.getFeed(),
+        _api.getTodo(),
+        _api.getConcepts(),
+      ]);
+      if (mounted) {
+        setState(() {
+          _insightCount = (results[0] as List).length;
+          _actionCount = (results[1] as List).length;
+          _conceptCount = (results[2] as List).length;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +54,7 @@ class ProfileScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
           children: [
-            // ── Header ─────────────────────────────────────────────────────
+            // ── Header row ─────────────────────────────────────────────────
             Row(children: [
               const Expanded(child: SizedBox()),
               GestureDetector(
@@ -36,10 +74,10 @@ class ProfileScreen extends StatelessWidget {
             ]),
             const SizedBox(height: 16),
 
-            // ── Profile Card ────────────────────────────────────────────────
+            // ── Avatar ─────────────────────────────────────────────────────
             Center(child: Column(children: [
               Container(
-                width: 80, height: 80,
+                width: 72, height: 72,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
@@ -48,30 +86,33 @@ class ProfileScreen extends StatelessWidget {
                     colors: [Color(0xFF8A6A30), Color(0xFF5A4020)],
                   ),
                 ),
-                child: const Icon(Icons.person_rounded, size: 36, color: InsightrColors.textPrimary),
+                child: const Icon(Icons.person_rounded, size: 32, color: InsightrColors.textPrimary),
               ),
               const SizedBox(height: 12),
-              Text('Sarah', style: GoogleFonts.inter(
-                fontSize: 24, fontWeight: FontWeight.w800,
-              )),
-              const SizedBox(height: 4),
-              Text('sarah@example.com', style: GoogleFonts.inter(
-                fontSize: 14, color: InsightrColors.textSecondary,
+              Text('My Vault', style: GoogleFonts.inter(
+                fontSize: 22, fontWeight: FontWeight.w800,
+                color: InsightrColors.textPrimary,
               )),
             ])),
+            const SizedBox(height: 20),
+
+            // ── Live stats ────────────────────────────────────────────────
+            if (_loading)
+              const Center(child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: CircularProgressIndicator(color: InsightrColors.goldPrimary, strokeWidth: 2),
+              ))
+            else
+              Row(children: [
+                _ProfileStat(value: '$_insightCount', label: 'Insights'),
+                const SizedBox(width: 10),
+                _ProfileStat(value: '$_actionCount', label: 'Actions'),
+                const SizedBox(width: 10),
+                _ProfileStat(value: '$_conceptCount', label: 'Concepts'),
+              ]),
             const SizedBox(height: 24),
 
-            // ── Stats Row ───────────────────────────────────────────────────
-            Row(children: [
-              _ProfileStat(value: '24', label: 'Insights'),
-              const SizedBox(width: 12),
-              _ProfileStat(value: '8', label: 'Collections'),
-              const SizedBox(width: 12),
-              _ProfileStat(value: '47', label: 'Actions'),
-            ]),
-            const SizedBox(height: 24),
-
-            // ── Quick Actions ────────────────────────────────────────────────
+            // ── Quick actions ─────────────────────────────────────────────
             _SectionLabel('QUICK ACTIONS'),
             _ProfileRow(
               icon: Icons.check_circle_outline_rounded,
@@ -84,22 +125,16 @@ class ProfileScreen extends StatelessWidget {
             _ProfileRow(
               icon: Icons.upload_rounded,
               iconColor: const Color(0xFF78A8D8),
-              label: 'Export My Vault',
+              label: 'Export Vault as Markdown',
               onTap: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => const ExportScreen(),
               )),
             ),
-            _ProfileRow(
-              icon: Icons.share_rounded,
-              iconColor: const Color(0xFF5CB870),
-              label: 'Share Insightr',
-              onTap: () {},
-            ),
 
             const SizedBox(height: 8),
 
-            // ── Account ──────────────────────────────────────────────────────
-            _SectionLabel('ACCOUNT'),
+            // ── Account ───────────────────────────────────────────────────
+            _SectionLabel('APP'),
             _ProfileRow(
               icon: Icons.settings_rounded,
               iconColor: InsightrColors.goldPrimary,
@@ -140,7 +175,7 @@ class _ProfileStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
         color: const Color(0x0AFFFFFF),
         borderRadius: InsightrRadii.lgAll,
@@ -148,7 +183,7 @@ class _ProfileStat extends StatelessWidget {
       ),
       child: Column(children: [
         Text(value, style: GoogleFonts.inter(
-          fontSize: 24, fontWeight: FontWeight.w800, color: InsightrColors.goldPrimary,
+          fontSize: 22, fontWeight: FontWeight.w800, color: InsightrColors.goldPrimary,
         )),
         const SizedBox(height: 2),
         Text(label, style: GoogleFonts.inter(
@@ -166,7 +201,7 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 24, bottom: 12, left: 4),
+      padding: const EdgeInsets.only(top: 20, bottom: 10, left: 4),
       child: Text(text, style: GoogleFonts.inter(
         fontSize: 10, fontWeight: FontWeight.w700,
         letterSpacing: 2, color: InsightrColors.textMuted,
@@ -193,7 +228,7 @@ class _ProfileRow extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
           color: const Color(0x0AFFFFFF),
@@ -201,10 +236,11 @@ class _ProfileRow extends StatelessWidget {
           border: Border.all(color: const Color(0x12FFFFFF), width: 1),
         ),
         child: Row(children: [
-          Icon(icon, size: 20, color: iconColor),
+          Icon(icon, size: 18, color: iconColor),
           const SizedBox(width: 14),
           Expanded(child: Text(label, style: GoogleFonts.inter(
-            fontSize: 15, fontWeight: FontWeight.w500,
+            fontSize: 14, fontWeight: FontWeight.w500,
+            color: InsightrColors.textPrimary,
           ))),
           const Icon(Icons.chevron_right_rounded, size: 16, color: InsightrColors.textMuted),
         ]),

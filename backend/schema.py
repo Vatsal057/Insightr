@@ -56,10 +56,9 @@ class RabbitHole(BaseModel):
     follow_up_questions: List[str] = Field(default_factory=list)
     knowledge_gaps: List[str] = Field(default_factory=list)
     adjacent_topics: List[str] = Field(default_factory=list)
-    advanced_concepts: List[str] = Field(default_factory=list)
-    deep_research_prompt: str = Field(
-        default="",
-        description="A reusable LLM prompt the user can paste into any AI to do deeper research."
+    advanced_concepts: List[str] = Field(
+        default_factory=list,
+        description="Concepts the user should look up next if they want to master this topic."
     )
 
 
@@ -87,6 +86,8 @@ class EffortEstimation(BaseModel):
     difficulty: Literal[1, 2, 3, 4, 5] = Field(description="1 = trivial, 5 = expert-level")
     effort: Literal[1, 2, 3, 4, 5] = Field(description="1 = minimal effort, 5 = high sustained effort")
     difficulty_rationale: Optional[str] = None
+
+
 
 
 class MissingContextItem(BaseModel):
@@ -397,9 +398,8 @@ GEMINI_RESPONSE_SCHEMA = {
                 "knowledge_gaps": {"type": "array", "items": {"type": "string"}},
                 "adjacent_topics": {"type": "array", "items": {"type": "string"}},
                 "advanced_concepts": {"type": "array", "items": {"type": "string"}},
-                "deep_research_prompt": {"type": "string"},
             },
-            "required": ["follow_up_questions", "knowledge_gaps", "adjacent_topics", "advanced_concepts", "deep_research_prompt"],
+            "required": ["follow_up_questions", "knowledge_gaps", "adjacent_topics", "advanced_concepts"],
         },
         "concepts": {
             "type": "array",

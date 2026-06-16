@@ -354,6 +354,7 @@ class ReferencedArtifact {
   }
 }
 
+
 class TopicMap {
   final String mainTopic;
   final List<String> subtopics;
@@ -373,14 +374,14 @@ class EffortEstimation {
   final String timeToImplement;
   final int difficulty;
   final int effort;
-  final String difficultyRationale;
+  final String? difficultyRationale;
 
   const EffortEstimation({
     required this.timeToLearn,
     required this.timeToImplement,
     required this.difficulty,
     required this.effort,
-    required this.difficultyRationale,
+    this.difficultyRationale,
   });
 
   factory EffortEstimation.fromJson(Map<String, dynamic> json) {
@@ -389,7 +390,7 @@ class EffortEstimation {
       timeToImplement: json['time_to_implement'] as String? ?? '',
       difficulty: json['difficulty'] as int? ?? 0,
       effort: json['effort'] as int? ?? 0,
-      difficultyRationale: json['difficulty_rationale'] as String? ?? '',
+      difficultyRationale: json['difficulty_rationale'] as String?,
     );
   }
 }

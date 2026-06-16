@@ -511,7 +511,7 @@ def list_action_items(db_path: str, done: Optional[bool] = None) -> List[sqlite3
     try:
         base = """
             SELECT a.id, a.text, a.done, a.priority, a.time_estimate,
-                   e.id as entry_id, e.title
+                   e.id as entry_id, e.title, e.field
             FROM action_items a JOIN entries e ON e.id = a.entry_id
         """
         params: list = []
@@ -755,13 +755,36 @@ def get_entries_for_concept(db_path: str, concept_id: int) -> List[sqlite3.Row]:
 # ---------------------------------------------------------------------------
 
 def get_deep_research_prompt(db_path: str, entry_id: int) -> Optional[str]:
-    """Returns the pre-generated deep research prompt for an entry."""
+    """Generates a deep research prompt dynamically from the entry's rabbit hole data."""
     conn = get_connection(db_path)
     try:
-        row = conn.execute("SELECT rabbit_hole FROM entries WHERE id = ?", (entry_id,)).fetchone()
+        row = conn.execute("SELECT title, rabbit_hole FROM entries WHERE id = ?", (entry_id,)).fetchone()
         if not row or not row["rabbit_hole"]:
             return None
+        
         rabbit_hole = json.loads(row["rabbit_hole"])
-        return rabbit_hole.get("deep_research_prompt") or None
+        title = row["title"]
+        
+        questions = rabbit_hole.get("follow_up_questions", [])
+        gaps = rabbit_hole.get("knowledge_gaps", [])
+        adjacent = rabbit_hole.get("adjacent_topics", [])
+        advanced = rabbit_hole.get("advanced_concepts", [])
+        
+        if not any([questions, gaps, adjacent, advanced]):
+            return None
+            
+        prompt = f"You are a research assistant. I just learned about '{title}'.\n\n"
+        
+        if questions:
+            prompt += "Here are some follow-up questions I have:\n" + "\n".join(f"- {q}" for q in questions) + "\n\n"
+        if gaps:
+            prompt += "And here are some specific knowledge gaps I need filled:\n" + "\n".join(f"- {g}" for g in gaps) + "\n\n"
+        if adjacent:
+            prompt += "I'm also interested in exploring these adjacent topics:\n" + "\n".join(f"- {a}" for a in adjacent) + "\n\n"
+        if advanced:
+            prompt += "As well as these advanced concepts:\n" + "\n".join(f"- {a}" for a in advanced) + "\n\n"
+            
+        prompt += "Please act as an expert and provide a comprehensive deep dive covering these specific areas."
+        return prompt
     finally:
         conn.close()

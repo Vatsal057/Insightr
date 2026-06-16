@@ -65,8 +65,6 @@ def entry_to_markdown(entry: KnowledgeEntry) -> str:
             lines.append("\n**Advanced concepts**")
             for c in rh.advanced_concepts:
                 lines.append(f"- {c}")
-        if rh.deep_research_prompt:
-            lines += ["", "**Deep Research Prompt**", "```", rh.deep_research_prompt, "```"]
         lines.append("")
 
     # What the Creator Didn't Mention

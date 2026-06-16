@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/entry.dart';
 import '../theme.dart';
@@ -17,19 +18,51 @@ class NoteBlockRenderer extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 16),
       child: switch (block.blockType) {
         'key_insight' => _KeyInsightBlock(block: block),
-        'checklist' => _ChecklistBlock(block: block),
-        'steps' => _StepsBlock(block: block),
-        'bullets' => _BulletsBlock(block: block),
-        'stat_row' => _StatRowBlock(block: block),
-        'comparison' => _ComparisonBlock(block: block),
-        'label_values' => _LabelValuesBlock(block: block),
-        'timeline' => _TimelineBlock(block: block),
-        'quote' => _QuoteBlock(block: block),
-        'code_snippet' => _CodeBlock(block: block),
-        _ => _TextBlock(block: block),
+        'checklist'   => _ChecklistBlock(block: block),
+        'steps'       => _StepsBlock(block: block),
+        'bullets'     => _BulletsBlock(block: block),
+        'stat_row'    => _StatRowBlock(block: block),
+        'comparison'  => _ComparisonBlock(block: block),
+        'label_values'=> _LabelValuesBlock(block: block),
+        'timeline'    => _TimelineBlock(block: block),
+        'quote'       => _QuoteBlock(block: block),
+        'code_snippet'=> _CodeBlock(block: block),
+        _             => _TextBlock(block: block),
       },
     );
   }
+}
+
+// ─── Inline Bold Parser ──────────────────────────────────────────────────────
+// Parses **bold** markers and renders them as bold spans inline.
+
+TextSpan _parseBold(String text, TextStyle base) {
+  final boldStyle = base.copyWith(
+    fontWeight: FontWeight.w700,
+    color: InsightrColors.textPrimary,
+  );
+
+  final spans = <InlineSpan>[];
+  final regex = RegExp(r'\*\*(.+?)\*\*');
+  int last = 0;
+
+  for (final match in regex.allMatches(text)) {
+    if (match.start > last) {
+      spans.add(TextSpan(text: text.substring(last, match.start), style: base));
+    }
+    spans.add(TextSpan(text: match.group(1), style: boldStyle));
+    last = match.end;
+  }
+
+  if (last < text.length) {
+    spans.add(TextSpan(text: text.substring(last), style: base));
+  }
+
+  return TextSpan(children: spans.isEmpty ? [TextSpan(text: text, style: base)] : spans);
+}
+
+Widget _richText(String text, TextStyle base) {
+  return RichText(text: _parseBold(text, base));
 }
 
 // ─── Section Title Helper ────────────────────────────────────────────────────
@@ -59,65 +92,96 @@ class _KeyInsightBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GoldGlassCard(leftBorderOnly: true, child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _sectionTitle(block.title ?? 'CORE TAKEAWAY'),
-        Text(block.content, style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: InsightrColors.textPrimary, height: 1.6,
-        )),
-      ],
-    ));
+    final bodyStyle = GoogleFonts.inter(
+      fontSize: 14, height: 1.6, color: InsightrColors.textPrimary,
+    );
+    return GoldGlassCard(
+      leftBorderOnly: true,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _sectionTitle((block.title ?? '').isNotEmpty ? block.title : 'KEY INSIGHT'),
+        _richText(block.content, bodyStyle),
+      ]),
+    );
   }
 }
 
-class _ChecklistBlock extends StatelessWidget {
+// ─── Checklist — stateful so checkboxes actually toggle ──────────────────────
+
+class _ChecklistBlock extends StatefulWidget {
   final NoteBlock block;
   const _ChecklistBlock({required this.block});
 
   @override
-  Widget build(BuildContext context) {
-    final items = _lines(block.content);
-    return GlassCard(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _sectionTitle(block.title ?? 'QUICK WINS'),
-          ...items.map((item) => _CheckRow(text: item)),
-        ],
-      ),
-    );
-  }
+  State<_ChecklistBlock> createState() => _ChecklistBlockState();
 }
 
-class _CheckRow extends StatelessWidget {
-  final String text;
-  const _CheckRow({required this.text});
+class _ChecklistBlockState extends State<_ChecklistBlock> {
+  late final List<bool> _checked;
+  late final List<String> _items;
+
+  @override
+  void initState() {
+    super.initState();
+    _items = _lines(widget.block.content);
+    _checked = List.filled(_items.length, false);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 20, height: 20,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0x265C9A6A),
-              border: Border.all(color: const Color(0x665C9A6A), width: 1.5),
+    final itemStyle = GoogleFonts.inter(
+      fontSize: 13, height: 1.5, color: InsightrColors.textSecondary,
+    );
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _sectionTitle((widget.block.title ?? '').isNotEmpty ? widget.block.title : 'CHECKLIST'),
+        ...List.generate(_items.length, (i) {
+          final done = _checked[i];
+          return GestureDetector(
+            onTap: () => setState(() => _checked[i] = !_checked[i]),
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 20, height: 20,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: done
+                        ? InsightrColors.green.withAlpha(60)
+                        : const Color(0x0DFFFFFF),
+                    border: Border.all(
+                      color: done
+                          ? InsightrColors.green
+                          : const Color(0x33FFFFFF),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: done
+                      ? const Icon(Icons.check_rounded, size: 11, color: InsightrColors.green)
+                      : null,
+                ),
+                const SizedBox(width: 10),
+                Expanded(child: _richText(
+                  _items[i],
+                  done
+                      ? itemStyle.copyWith(
+                          decoration: TextDecoration.lineThrough,
+                          color: InsightrColors.textMuted,
+                        )
+                      : itemStyle,
+                )),
+              ]),
             ),
-            child: const Icon(Icons.check_rounded, size: 10, color: InsightrColors.green),
-          ),
-          const SizedBox(width: 10),
-          Expanded(child: Text(text, style: Theme.of(context).textTheme.bodySmall)),
-        ],
-      ),
+          );
+        }),
+      ]),
     );
   }
 }
+
+// ─── Steps ────────────────────────────────────────────────────────────────────
 
 class _StepsBlock extends StatelessWidget {
   final NoteBlock block;
@@ -126,49 +190,37 @@ class _StepsBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = _lines(block.content);
+    final stepStyle = GoogleFonts.inter(
+      fontSize: 13, height: 1.5, color: InsightrColors.textSecondary,
+    );
     return GlassCard(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _sectionTitle(block.title ?? 'STEPS'),
-          ...items.asMap().entries.map((e) => _StepRow(number: e.key + 1, text: e.value)),
-        ],
-      ),
-    );
-  }
-}
-
-class _StepRow extends StatelessWidget {
-  final int number;
-  final String text;
-  const _StepRow({required this.number, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 24, height: 24,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0x1FC9A84C),
-              border: Border.all(color: const Color(0x40C9A84C), width: 1),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _sectionTitle((block.title ?? '').isNotEmpty ? block.title : null),
+        ...items.asMap().entries.map((e) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Container(
+              width: 24, height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0x1FC9A84C),
+                border: Border.all(color: const Color(0x40C9A84C), width: 1),
+              ),
+              child: Center(child: Text('${e.key + 1}', style: GoogleFonts.inter(
+                fontSize: 12, fontWeight: FontWeight.w700, color: InsightrColors.goldPrimary,
+              ))),
             ),
-            child: Center(child: Text('$number', style: GoogleFonts.inter(
-              fontSize: 12, fontWeight: FontWeight.w700, color: InsightrColors.goldPrimary,
-            ))),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Text(text, style: Theme.of(context).textTheme.bodySmall)),
-        ],
-      ),
+            const SizedBox(width: 12),
+            Expanded(child: _richText(e.value, stepStyle)),
+          ]),
+        )),
+      ]),
     );
   }
 }
+
+// ─── Bullets ─────────────────────────────────────────────────────────────────
 
 class _BulletsBlock extends StatelessWidget {
   final NoteBlock block;
@@ -177,27 +229,34 @@ class _BulletsBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = _lines(block.content);
+    final itemStyle = GoogleFonts.inter(
+      fontSize: 13, height: 1.5, color: InsightrColors.textSecondary,
+    );
     return GlassCard(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _sectionTitle(block.title),
-          ...items.map((item) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Padding(padding: const EdgeInsets.only(top: 5, right: 8),
-                child: Container(width: 4, height: 4, decoration: const BoxDecoration(
-                  color: InsightrColors.goldMuted, shape: BoxShape.circle,
-                ))),
-              Expanded(child: Text(item, style: Theme.of(context).textTheme.bodySmall)),
-            ]),
-          )),
-        ],
-      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _sectionTitle((block.title ?? '').isNotEmpty ? block.title : null),
+        ...items.map((item) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 5),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 7, right: 10),
+              child: Container(
+                width: 4, height: 4,
+                decoration: const BoxDecoration(
+                  color: InsightrColors.goldPrimary, shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Expanded(child: _richText(item, itemStyle)),
+          ]),
+        )),
+      ]),
     );
   }
 }
+
+// ─── Stat Row — wraps to 2-column grid when 3+ items to avoid overflow ────────
 
 class _StatRowBlock extends StatelessWidget {
   final NoteBlock block;
@@ -207,15 +266,36 @@ class _StatRowBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = _lines(block.content);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      if (block.title != null) _sectionTitle(block.title),
-      Row(
-        children: items.map((item) {
-          final parts = item.split('|');
-          final value = parts.isNotEmpty ? parts[0].trim() : '';
-          final label = parts.length > 1 ? parts[1].trim() : '';
-          return Expanded(child: _StatBox(value: value, label: label));
-        }).toList(),
-      ),
+      if ((block.title ?? '').isNotEmpty) _sectionTitle(block.title),
+      if (items.length <= 2)
+        Row(
+          children: items.map((item) {
+            final parts = item.split('|');
+            return Expanded(child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: _StatBox(
+                value: parts.isNotEmpty ? parts[0].trim() : '',
+                label: parts.length > 1 ? parts[1].trim() : '',
+              ),
+            ));
+          }).toList(),
+        )
+      else
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          childAspectRatio: 2.2,
+          children: items.map((item) {
+            final parts = item.split('|');
+            return _StatBox(
+              value: parts.isNotEmpty ? parts[0].trim() : '',
+              label: parts.length > 1 ? parts[1].trim() : '',
+            );
+          }).toList(),
+        ),
     ]);
   }
 }
@@ -231,16 +311,18 @@ class _StatBox extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       child: Column(children: [
         Text(value, style: GoogleFonts.inter(
-          fontSize: 20, fontWeight: FontWeight.w800, color: InsightrColors.goldPrimary,
-        )),
+          fontSize: 18, fontWeight: FontWeight.w800, color: InsightrColors.goldPrimary,
+        ), textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, maxLines: 2),
         const SizedBox(height: 2),
         Text(label, style: GoogleFonts.inter(
           fontSize: 11, color: InsightrColors.textSecondary,
-        ), textAlign: TextAlign.center),
+        ), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
       ]),
     );
   }
 }
+
+// ─── Comparison ────────────────────────────────────────────────────────────────
 
 class _ComparisonBlock extends StatelessWidget {
   final NoteBlock block;
@@ -252,26 +334,34 @@ class _ComparisonBlock extends StatelessWidget {
     if (lines.isEmpty) return const SizedBox.shrink();
     final headers = lines.first.split('|');
     final rows = lines.skip(1).toList();
+    final cellStyle = GoogleFonts.inter(
+      fontSize: 12, height: 1.4, color: InsightrColors.textSecondary,
+    );
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _sectionTitle(block.title),
+        _sectionTitle((block.title ?? '').isNotEmpty ? block.title : null),
         Row(children: headers.map((h) => Expanded(child: Text(h.trim(),
           style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700,
             color: InsightrColors.goldPrimary)))).toList()),
         const SizedBox(height: 8),
+        const Divider(color: Color(0x14FFFFFF), height: 1),
+        const SizedBox(height: 8),
         ...rows.map((row) {
           final cells = row.split('|');
           return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(children: cells.map((c) => Expanded(child: Text(c.trim(),
-              style: Theme.of(context).textTheme.bodySmall))).toList()),
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              ...cells.map((c) => Expanded(child: _richText(c.trim(), cellStyle))),
+            ]),
           );
         }),
       ]),
     );
   }
 }
+
+// ─── Label Values ─────────────────────────────────────────────────────────────
 
 class _LabelValuesBlock extends StatelessWidget {
   final NoteBlock block;
@@ -280,21 +370,29 @@ class _LabelValuesBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = _lines(block.content);
+    final valStyle = GoogleFonts.inter(
+      fontSize: 13, height: 1.4, color: InsightrColors.textPrimary,
+    );
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _sectionTitle(block.title),
+        _sectionTitle((block.title ?? '').isNotEmpty ? block.title : null),
         ...items.map((item) {
           final idx = item.indexOf(':');
           final lbl = idx >= 0 ? item.substring(0, idx).trim() : item;
           final val = idx >= 0 ? item.substring(idx + 1).trim() : '';
           return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(children: [
-              Text('$lbl: ', style: GoogleFonts.inter(fontSize: 13,
-                fontWeight: FontWeight.w600, color: InsightrColors.textSecondary)),
-              Expanded(child: Text(val, style: Theme.of(context).textTheme.bodySmall
-                ?.copyWith(color: InsightrColors.textPrimary))),
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              SizedBox(
+                width: 110,
+                child: Text('$lbl', style: GoogleFonts.inter(
+                  fontSize: 12, fontWeight: FontWeight.w600,
+                  color: InsightrColors.textSecondary, height: 1.4,
+                )),
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: _richText(val, valStyle)),
             ]),
           );
         }),
@@ -302,6 +400,8 @@ class _LabelValuesBlock extends StatelessWidget {
     );
   }
 }
+
+// ─── Timeline ─────────────────────────────────────────────────────────────────
 
 class _TimelineBlock extends StatelessWidget {
   final NoteBlock block;
@@ -310,29 +410,46 @@ class _TimelineBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = _lines(block.content);
+    final descStyle = GoogleFonts.inter(
+      fontSize: 12, height: 1.4, color: InsightrColors.textSecondary,
+    );
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _sectionTitle(block.title),
+        _sectionTitle((block.title ?? '').isNotEmpty ? block.title : null),
         ...items.asMap().entries.map((e) {
           final idx = e.value.indexOf(':');
           final lbl = idx >= 0 ? e.value.substring(0, idx).trim() : e.value;
           final desc = idx >= 0 ? e.value.substring(idx + 1).trim() : '';
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          final isLast = e.key == items.length - 1;
+          return IntrinsicHeight(
+            child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Column(children: [
-                Container(width: 10, height: 10, decoration: const BoxDecoration(
-                  shape: BoxShape.circle, color: InsightrColors.goldPrimary,
+                Container(
+                  width: 10, height: 10,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle, color: InsightrColors.goldPrimary,
+                  ),
+                ),
+                if (!isLast) Expanded(child: Container(
+                  width: 1, color: InsightrColors.goldDim,
                 )),
-                if (e.key < items.length - 1)
-                  Container(width: 1, height: 32, color: InsightrColors.goldDim),
+                if (isLast) const SizedBox(height: 0),
               ]),
               const SizedBox(width: 12),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(lbl, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700)),
-                if (desc.isNotEmpty) Text(desc, style: Theme.of(context).textTheme.bodySmall),
-              ])),
+              Expanded(child: Padding(
+                padding: EdgeInsets.only(bottom: isLast ? 0 : 16),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(lbl, style: GoogleFonts.inter(
+                    fontSize: 13, fontWeight: FontWeight.w700,
+                    color: InsightrColors.textPrimary,
+                  )),
+                  if (desc.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    _richText(desc, descStyle),
+                  ],
+                ]),
+              )),
             ]),
           );
         }),
@@ -341,41 +458,110 @@ class _TimelineBlock extends StatelessWidget {
   }
 }
 
+// ─── Quote ────────────────────────────────────────────────────────────────────
+
 class _QuoteBlock extends StatelessWidget {
   final NoteBlock block;
   const _QuoteBlock({required this.block});
 
   @override
   Widget build(BuildContext context) {
-    return GoldGlassCard(leftBorderOnly: true, child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _sectionTitle(block.title),
-        Text('"${block.content}"',
-          style: GoogleFonts.inter(fontSize: 14, fontStyle: FontStyle.italic,
-            color: InsightrColors.textPrimary, height: 1.6)),
-      ],
-    ));
+    return GoldGlassCard(
+      leftBorderOnly: true,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Icon(Icons.format_quote_rounded, color: InsightrColors.goldMuted, size: 20),
+        const SizedBox(height: 6),
+        Text(block.content, style: GoogleFonts.inter(
+          fontSize: 15, fontStyle: FontStyle.italic,
+          color: InsightrColors.textPrimary, height: 1.7,
+          fontWeight: FontWeight.w500,
+        )),
+      ]),
+    );
   }
 }
 
-class _CodeBlock extends StatelessWidget {
+// ─── Code / Snippet — with copy button ───────────────────────────────────────
+
+class _CodeBlock extends StatefulWidget {
   final NoteBlock block;
   const _CodeBlock({required this.block});
+
+  @override
+  State<_CodeBlock> createState() => _CodeBlockState();
+}
+
+class _CodeBlockState extends State<_CodeBlock> {
+  bool _copied = false;
+
+  Future<void> _copy() async {
+    await Clipboard.setData(ClipboardData(text: widget.block.content));
+    setState(() => _copied = true);
+    await Future.delayed(const Duration(seconds: 2));
+    if (mounted) setState(() => _copied = false);
+  }
 
   @override
   Widget build(BuildContext context) {
     return GlassCard(
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _sectionTitle(block.title ?? 'CODE'),
-        Text(block.content, style: GoogleFonts.jetBrainsMono(
-          fontSize: 12, color: const Color(0xFFC8C8A0), height: 1.7,
-        )),
+        Row(children: [
+          Expanded(child: _sectionTitle(
+            (widget.block.title ?? '').isNotEmpty ? widget.block.title : 'CODE / TEMPLATE',
+          )),
+          GestureDetector(
+            onTap: _copy,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
+              decoration: BoxDecoration(
+                color: _copied
+                    ? InsightrColors.green.withAlpha(40)
+                    : const Color(0x0DFFFFFF),
+                borderRadius: InsightrRadii.fullAll,
+                border: Border.all(
+                  color: _copied
+                      ? InsightrColors.green.withAlpha(100)
+                      : const Color(0x20FFFFFF),
+                ),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(
+                  _copied ? Icons.check_rounded : Icons.copy_rounded,
+                  size: 11,
+                  color: _copied ? InsightrColors.green : InsightrColors.textSecondary,
+                ),
+                const SizedBox(width: 4),
+                Text(_copied ? 'Copied!' : 'Copy',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: _copied ? InsightrColors.green : InsightrColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  )),
+              ]),
+            ),
+          ),
+        ]),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0x18000000),
+            borderRadius: InsightrRadii.mdAll,
+            border: Border.all(color: const Color(0x0AFFFFFF)),
+          ),
+          child: Text(widget.block.content, style: GoogleFonts.jetBrainsMono(
+            fontSize: 12, color: const Color(0xFFC8C8A0), height: 1.7,
+          )),
+        ),
       ]),
     );
   }
 }
+
+// ─── Text ─────────────────────────────────────────────────────────────────────
 
 class _TextBlock extends StatelessWidget {
   final NoteBlock block;
@@ -383,9 +569,18 @@ class _TextBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _sectionTitle(block.title),
-      Text(block.content, style: Theme.of(context).textTheme.bodySmall),
-    ]);
+    final bodyStyle = GoogleFonts.inter(
+      fontSize: 13, height: 1.65, color: InsightrColors.textSecondary,
+    );
+    if ((block.title ?? '').isEmpty) {
+      return _richText(block.content, bodyStyle);
+    }
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _sectionTitle(block.title),
+        _richText(block.content, bodyStyle),
+      ]),
+    );
   }
 }

@@ -268,15 +268,15 @@ class ApiService {
     return response.body;
   }
 
-  /// Bulk export the entire vault in the specified format.
-  /// format: 'markdown' | 'notion' | 'json' | 'csv'
-  Future<void> export({required String format}) async {
-    final uri = Uri.parse('$_base${AppConstants.exportEndpoint}')
-        .replace(queryParameters: {'format': format});
-    final response = await _client.get(uri);
+  /// Export the entire vault as Markdown — GET /api/export?format=markdown
+  Future<String> exportVault() async {
+    final uri = Uri.parse('\$_base\${AppConstants.exportEndpoint}')
+        .replace(queryParameters: {'format': 'markdown'});
+    final response = await _client.get(uri).timeout(const Duration(seconds: 30));
     if (response.statusCode >= 400) {
       throw ApiException(response.statusCode, response.body);
     }
+    return response.body;
   }
 
   void dispose() => _client.close();

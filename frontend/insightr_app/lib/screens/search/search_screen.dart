@@ -39,7 +39,7 @@ class _SearchScreenState extends State<SearchScreen> {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-        child: Text('Search', style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 40, letterSpacing: -1.5)),
+        child: Text('Search', style: GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.w800, letterSpacing: -1.0, color: InsightrColors.textPrimary)),
       ),
       const SizedBox(height: 4),
       Padding(
@@ -90,7 +90,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         Padding(
                           padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                           child: Row(children: [
-                            Text('${_results.length} results for "$_controller.text"', style: GoogleFonts.inter(
+                            Text('${_results.length} results for "${_controller.text}"', style: GoogleFonts.inter(
                               fontSize: 13, color: InsightrColors.textSecondary,
                             )),
                             const Spacer(),

@@ -12,8 +12,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _autoProcess = true;
-  String _processingQuality = 'High';
-  String _language = 'English';
 
   @override
   Widget build(BuildContext context) {
@@ -48,64 +46,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 60),
         children: [
-          // ── ACCOUNT ──────────────────────────────────────────────────────
-          _SectionLabel('ACCOUNT'),
-          _SettingsGroup(children: [
-            _SettingsRow(
-              icon: Icons.person_outline_rounded,
-              label: 'Display Name',
-              value: 'Sarah',
-              onTap: () {},
-            ),
-            _SettingsRow(
-              icon: Icons.mail_outline_rounded,
-              label: 'Email',
-              value: 'sarah@example.com',
-              onTap: () {},
-            ),
-          ]),
 
-          // ── AI & PROCESSING ───────────────────────────────────────────────
-          _SectionLabel('AI & PROCESSING'),
+
+          // ── PROCESSING ───────────────────────────────────────────────────
+          _SectionLabel('PROCESSING'),
           _SettingsGroup(children: [
             _SwitchRow(
               icon: Icons.auto_awesome_rounded,
               label: 'Auto-process on share',
               value: _autoProcess,
               onChanged: (v) => setState(() => _autoProcess = v),
-            ),
-            _SettingsRow(
-              icon: Icons.high_quality_rounded,
-              label: 'Processing Quality',
-              value: _processingQuality,
-              onTap: () => _showPicker(
-                context, 'Processing Quality',
-                ['Standard', 'High', 'Ultra'],
-                _processingQuality,
-                (v) => setState(() => _processingQuality = v),
-              ),
-            ),
-            _SettingsRow(
-              icon: Icons.language_rounded,
-              label: 'Language',
-              value: _language,
-              onTap: () => _showPicker(
-                context, 'Language',
-                ['English', 'Spanish', 'French', 'German', 'Hindi'],
-                _language,
-                (v) => setState(() => _language = v),
-              ),
-            ),
-          ]),
-
-          // ── INTEGRATIONS ─────────────────────────────────────────────────
-          _SectionLabel('INTEGRATIONS'),
-          _SettingsGroup(children: [
-            _SettingsRow(
-              icon: Icons.output_rounded,
-              label: 'Default Export Format',
-              value: 'Markdown',
-              onTap: () {},
             ),
           ]),
 

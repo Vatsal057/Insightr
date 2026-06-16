@@ -5,7 +5,10 @@ class ActionItem {
   final String priority; // "now" | "soon" | "someday"
   final String? timeEstimate;
   final int entryId;
-  final String? title; // Included when fetched from /api/todo
+  /// Entry title — populated when fetched via /api/todo
+  final String? title;
+  /// Entry field (category) — populated when fetched via /api/todo
+  final String? entryField;
 
   const ActionItem({
     required this.id,
@@ -15,6 +18,7 @@ class ActionItem {
     this.timeEstimate,
     required this.entryId,
     this.title,
+    this.entryField,
   });
 
   factory ActionItem.fromJson(Map<String, dynamic> json) {
@@ -26,18 +30,19 @@ class ActionItem {
       timeEstimate: json['time_estimate'] as String?,
       entryId: json['entry_id'] as int? ?? 0,
       title: json['title'] as String?,
+      entryField: json['field'] as String?,
     );
   }
 
   ActionItem copyWith({bool? done}) {
     return ActionItem(
-      id: id,
-      text: text,
+      id: id, text: text,
       done: done ?? this.done,
       priority: priority,
       timeEstimate: timeEstimate,
       entryId: entryId,
       title: title,
+      entryField: entryField,
     );
   }
 }

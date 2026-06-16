@@ -65,9 +65,7 @@ class _KnowledgeVaultScreenState extends State<KnowledgeVaultScreen>
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-        child: Text('Knowledge\nVault', style: Theme.of(context).textTheme.displaySmall?.copyWith(
-          letterSpacing: -1.0, height: 1.05,
-        )),
+        child: Text('Knowledge Vault', style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: InsightrColors.textPrimary)),
       ),
       const SizedBox(height: 4),
       Padding(

@@ -10,6 +10,7 @@ import '../../services/api_service.dart';
 import '../add_url/add_url_sheet.dart';
 import '../insight_detail/insight_detail_screen.dart';
 import '../search/search_screen.dart';
+import '../actions/action_items_screen.dart';
 import '../vault/knowledge_vault_screen.dart';
 import '../profile/profile_screen.dart';
 import '../settings/settings_screen.dart';
@@ -24,17 +25,26 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _api = ApiService();
   int _navIndex = 0;
+  int _pendingActionCount = 0;
   String _activeFilter = 'All';
   List<FeedCard> _allCards = [];
   bool _loading = true;
   String? _error;
 
-  final List<String> _filters = ['All', 'Startup', 'Fitness', 'Coding', 'Finance', 'Psychology'];
+  // Filters derived from actual feed card fields (populated after load)
 
   @override
   void initState() {
     super.initState();
     _loadFeed();
+    _loadPendingCount();
+  }
+
+  Future<void> _loadPendingCount() async {
+    try {
+      final items = await _api.getTodo(done: false);
+      if (mounted) setState(() => _pendingActionCount = items.length);
+    } catch (_) {}
   }
 
   Future<void> _loadFeed() async {
@@ -47,6 +57,16 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  List<String> get _filters {
+    final fields = _allCards
+        .map((c) => c.field.trim())
+        .where((f) => f.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    return ['All', ...fields];
+  }
+
   List<FeedCard> get _filteredCards {
     if (_activeFilter == 'All') return _allCards;
     return _allCards
@@ -57,8 +77,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildBody() {
     switch (_navIndex) {
       case 1: return const KnowledgeVaultScreen();
-      case 2: return const SearchScreen();
-      case 3: return const ProfileScreen();
+      case 2: return const ActionItemsScreen();
+      case 3: return const SearchScreen();
+      case 4: return const ProfileScreen();
       default: return _buildFeed();
     }
   }
@@ -102,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-          child: Text('Your Vault', style: Theme.of(context).textTheme.headlineMedium),
+          child: Text('Your Vault', style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: InsightrColors.textPrimary)),
         ),
         // Filter pills
         SizedBox(
@@ -168,7 +189,12 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: SafeArea(
         child: InsightrBottomNav(
           currentIndex: _navIndex,
-          onTap: (i) => setState(() => _navIndex = i),
+          onTap: (i) {
+            setState(() => _navIndex = i);
+            // Refresh pending count when switching away from Actions tab
+            if (i != 2) _loadPendingCount();
+          },
+          pendingCount: _pendingActionCount,
         ),
       ),
     );
@@ -317,7 +343,7 @@ class _ErrorState extends StatelessWidget {
         )),
         const SizedBox(height: 8),
         Text(error, style: GoogleFonts.inter(
-          fontSize: 12, color: InsightrColors.red.withOpacity(0.7), fontStyle: FontStyle.italic,
+          fontSize: 12, color: InsightrColors.red.withAlpha(178), fontStyle: FontStyle.italic,
         ), textAlign: TextAlign.center),
         const SizedBox(height: 8),
         Text('Make sure the backend is running\non port 8000', style: GoogleFonts.inter(

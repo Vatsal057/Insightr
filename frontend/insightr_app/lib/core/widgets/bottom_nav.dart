@@ -7,11 +7,13 @@ import '../theme.dart';
 class InsightrBottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
+  final int pendingCount;
 
   const InsightrBottomNav({
     super.key,
     required this.currentIndex,
     required this.onTap,
+    this.pendingCount = 0,
   });
 
   @override
@@ -46,8 +48,9 @@ class InsightrBottomNav extends StatelessWidget {
             children: [
               _NavItem(icon: Icons.home_rounded, label: 'Home', index: 0, currentIndex: currentIndex, onTap: onTap),
               _NavItem(icon: Icons.inventory_2_rounded, label: 'Vault', index: 1, currentIndex: currentIndex, onTap: onTap),
-              _NavItem(icon: Icons.search_rounded, label: 'Search', index: 2, currentIndex: currentIndex, onTap: onTap),
-              _NavItem(icon: Icons.person_outline_rounded, label: 'Profile', index: 3, currentIndex: currentIndex, onTap: onTap),
+              _NavItemWithBadge(icon: Icons.check_circle_outline_rounded, label: 'Actions', index: 2, currentIndex: currentIndex, onTap: onTap, badgeCount: pendingCount),
+              _NavItem(icon: Icons.search_rounded, label: 'Search', index: 3, currentIndex: currentIndex, onTap: onTap),
+              _NavItem(icon: Icons.person_outline_rounded, label: 'Profile', index: 4, currentIndex: currentIndex, onTap: onTap),
             ],
           ),
         ),
@@ -120,6 +123,85 @@ class _NavItem extends StatelessWidget {
                 letterSpacing: 0.3,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+class _NavItemWithBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final int index;
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+  final int badgeCount;
+
+  const _NavItemWithBadge({
+    required this.icon,
+    required this.label,
+    required this.index,
+    required this.currentIndex,
+    required this.onTap,
+    required this.badgeCount,
+  });
+
+  bool get isActive => index == currentIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => onTap(index),
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              height: 2,
+              width: isActive ? 28 : 0,
+              decoration: BoxDecoration(
+                color: InsightrColors.goldPrimary,
+                borderRadius: BorderRadius.circular(2),
+                boxShadow: isActive
+                    ? [BoxShadow(color: InsightrColors.goldPrimary.withAlpha(180), blurRadius: 8)]
+                    : [],
+              ),
+            ),
+            const SizedBox(height: 6),
+            Stack(clipBehavior: Clip.none, children: [
+              Icon(icon, size: 22,
+                color: isActive ? InsightrColors.goldPrimary : InsightrColors.textSecondary),
+              if (badgeCount > 0)
+                Positioned(
+                  top: -4, right: -6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: InsightrColors.goldPrimary,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                    child: Text(
+                      badgeCount > 99 ? '99+' : '$badgeCount',
+                      style: GoogleFonts.inter(
+                        fontSize: 8, fontWeight: FontWeight.w800,
+                        color: const Color(0xFF1A1200),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ]),
+            const SizedBox(height: 4),
+            Text(label, style: GoogleFonts.inter(
+              fontSize: 10, fontWeight: FontWeight.w500,
+              color: isActive ? InsightrColors.goldPrimary : InsightrColors.textSecondary,
+              letterSpacing: 0.3,
+            )),
           ],
         ),
       ),

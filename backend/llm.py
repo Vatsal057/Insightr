@@ -117,9 +117,6 @@ CONTENT TYPES:
 ── FEATURE 6: Into the Rabbit Hole ─────────────────────────────────────
 ▸ rabbit_hole  For users who want to go deeper — this is the "optional extension pack".
   Keep each list SHORT (2–3 items max per sub-field). Quality over quantity.
-  deep_research_prompt: A complete prompt to paste into any AI assistant for deeper research.
-  Format: "You are a research assistant. I just watched a short video about [topic] that claimed [X].
-  Research: 1) ... 2) ... Return: ..."
 
 ── FEATURE 7: Knowledge Cards ──────────────────────────────────────────
 ▸ concepts  Named things (frameworks, tools, books, people, methodologies) that were
@@ -345,12 +342,14 @@ def extract_knowledge(
     parts.append(types.Part.from_text(text=prompt))
 
     max_retries = 3
-    base_delay = 5  # seconds
+    base_delay_503 = 5   # seconds — server overloaded
+    base_delay_429 = 15  # seconds — quota/rate limit, needs longer pause
 
     for attempt in range(max_retries + 1):
         try:
             response = client.models.generate_content(
-                model="gemini-2.0-flash",
+                # gemini-2.5-flash: higher free-tier RPM + TPD quota than 2.0-flash
+                model="gemini-2.5-flash",
                 contents=parts,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
@@ -366,11 +365,18 @@ def extract_knowledge(
         except Exception as e:
             error_str = str(e)
             is_unavailable = "503" in error_str or "UNAVAILABLE" in error_str.upper()
-            
+            is_quota = "429" in error_str or "RESOURCE_EXHAUSTED" in error_str.upper() or "quota" in error_str.lower()
+
+            if is_quota and attempt < max_retries:
+                delay = (base_delay_429 * (2 ** attempt)) + random.uniform(0, 2)
+                print(f"  [!] Gemini quota/rate limit hit (429). Backing off {delay:.1f}s... (Attempt {attempt + 1}/{max_retries})")
+                time.sleep(delay)
+                continue
+
             if is_unavailable and attempt < max_retries:
-                delay = (base_delay * (2 ** attempt)) + random.uniform(0, 1)
+                delay = (base_delay_503 * (2 ** attempt)) + random.uniform(0, 1)
                 print(f"  [!] Gemini is busy (503). Retrying in {delay:.1f}s... (Attempt {attempt + 1}/{max_retries})")
                 time.sleep(delay)
                 continue
-            
+
             raise RuntimeError(f"Gemini API call failed: {e}")

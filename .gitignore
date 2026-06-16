@@ -29,6 +29,9 @@ backend/.env
 backend/vault.db
 backend/temp_images/
 backend/Antigravity_Design_Skills/
+backend.zip
+blob.png
+backend/exports/
 
 # Flutter / Dart
 **/.dart_tool/
