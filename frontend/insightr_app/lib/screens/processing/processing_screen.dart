@@ -57,6 +57,10 @@ class _ProcessingScreenState extends State<ProcessingScreen>
 
   Future<void> _poll() async {
     if (_taskId == null) return;
+    if (!mounted) {
+      _timer?.cancel();
+      return;
+    }
     try {
       final status = await _api.pollStatus(_taskId!);
       if (!mounted) return;
@@ -249,7 +253,7 @@ class _ProcessingScreenState extends State<ProcessingScreen>
               borderRadius: InsightrRadii.lgAll,
               border: Border.all(color: const Color(0x2EE05C4A), width: 1),
             ),
-            child: Text(_errorMsg!, style: GoogleFonts.jetBrainsMono(
+            child: Text(_errorMsg!, style: GoogleFonts.sourceCodePro(
               fontSize: 12, color: InsightrColors.red,
             )),
           ),

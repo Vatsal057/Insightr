@@ -56,6 +56,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               label: 'Auto-process on share',
               value: _autoProcess,
               onChanged: (v) => setState(() => _autoProcess = v),
+              isLast: true,
             ),
           ]),
 
@@ -78,6 +79,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _SettingsRow(
               icon: Icons.delete_sweep_rounded,
               label: 'Clear Cache',
+              isLast: true,
               onTap: () => _showConfirm(
                 context,
                 title: 'Clear Cache',
@@ -95,6 +97,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: Icons.delete_forever_rounded,
               label: 'Delete All Data',
               isDanger: true,
+              isLast: true,
               onTap: () => _showConfirm(
                 context,
                 title: 'Delete All Data',
@@ -220,6 +223,7 @@ class _SettingsRow extends StatelessWidget {
   final String label;
   final String? value;
   final bool isDanger;
+  final bool isLast;
   final VoidCallback? onTap;
 
   const _SettingsRow({
@@ -227,6 +231,7 @@ class _SettingsRow extends StatelessWidget {
     required this.label,
     this.value,
     this.isDanger = false,
+    this.isLast = false,
     required this.onTap,
   });
 
@@ -236,8 +241,8 @@ class _SettingsRow extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0x0DFFFFFF), width: 1)),
+        decoration: BoxDecoration(
+          border: isLast ? null : const Border(bottom: BorderSide(color: Color(0x0DFFFFFF), width: 1)),
         ),
         child: Row(children: [
           Icon(icon, size: 20, color: isDanger ? InsightrColors.red : InsightrColors.goldPrimary),
@@ -264,20 +269,22 @@ class _SwitchRow extends StatelessWidget {
   final String label;
   final bool value;
   final ValueChanged<bool> onChanged;
+  final bool isLast;
 
   const _SwitchRow({
     required this.icon,
     required this.label,
     required this.value,
     required this.onChanged,
+    this.isLast = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0x0DFFFFFF), width: 1)),
+      decoration: BoxDecoration(
+        border: isLast ? null : const Border(bottom: BorderSide(color: Color(0x0DFFFFFF), width: 1)),
       ),
       child: Row(children: [
         Icon(icon, size: 20, color: InsightrColors.goldPrimary),

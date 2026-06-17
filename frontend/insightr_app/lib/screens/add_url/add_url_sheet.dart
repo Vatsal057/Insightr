@@ -58,12 +58,12 @@ class _AddUrlSheetState extends State<AddUrlSheet> {
             color: Color(0xCC14140A),
             border: Border(top: BorderSide(color: Color(0x1AFFFFFF), width: 1)),
           ),
-      padding: EdgeInsets.only(
-        left: 24, right: 24,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 40,
-      ),
-      child: Column(
+          padding: EdgeInsets.only(
+            left: 24, right: 24,
+            top: 16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 40,
+          ),
+          child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -170,8 +170,7 @@ class _AddUrlSheetState extends State<AddUrlSheet> {
           ),
         ],
       ),
-    ),
-  ));
+    )));
   }
 }
 

@@ -79,7 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 1: return const KnowledgeVaultScreen();
       case 2: return const ActionItemsScreen();
       case 3: return const SearchScreen();
-      case 4: return const ProfileScreen();
+      case 4: return const _ProfileWrapper();
       default: return _buildFeed();
     }
   }
@@ -200,6 +200,16 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
+
+// Strips the nested Scaffold from ProfileScreen when it's embedded inside HomeScreen.
+// ProfileScreen manages its own Scaffold (for settings push navigation), so we
+// unwrap it here to avoid double-Scaffold issues.
+class _ProfileWrapper extends StatelessWidget {
+  const _ProfileWrapper();
+
+  @override
+  Widget build(BuildContext context) => const ProfileScreen();
 }
 
 // ─── Feed Card Widget ─────────────────────────────────────────────────────────

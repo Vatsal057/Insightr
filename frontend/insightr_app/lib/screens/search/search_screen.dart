@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../models/feed_card.dart';
@@ -89,7 +90,10 @@ class _SearchScreenState extends State<SearchScreen> {
         child: _loading
             ? const Center(child: CircularProgressIndicator(color: InsightrColors.goldPrimary))
             : !_hasSearched
-                ? _SearchHints()
+                ? _SearchHints(onSearch: (t) {
+                    _controller.text = t;
+                    _search(t);
+                  })
                 : _results.isEmpty
                     ? _NoResults(query: _controller.text)
                     : Column(children: [
@@ -132,6 +136,9 @@ class _SearchScreenState extends State<SearchScreen> {
 }
 
 class _SearchHints extends StatelessWidget {
+  final void Function(String) onSearch;
+  const _SearchHints({required this.onSearch});
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -143,14 +150,17 @@ class _SearchHints extends StatelessWidget {
         const SizedBox(height: 12),
         Wrap(spacing: 8, runSpacing: 8, children: [
           'Productivity', 'Startup', 'Finance', 'AI', 'Fitness', 'Mindset',
-        ].map((t) => Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-          decoration: BoxDecoration(
-            color: const Color(0x0DFFFFFF),
-            borderRadius: InsightrRadii.fullAll,
-            border: Border.all(color: const Color(0x14FFFFFF), width: 1),
+        ].map((t) => GestureDetector(
+          onTap: () => onSearch(t),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            decoration: BoxDecoration(
+              color: const Color(0x0DFFFFFF),
+              borderRadius: InsightrRadii.fullAll,
+              border: Border.all(color: const Color(0x14FFFFFF), width: 1),
+            ),
+            child: Text(t, style: GoogleFonts.inter(fontSize: 13, color: InsightrColors.textSecondary)),
           ),
-          child: Text(t, style: GoogleFonts.inter(fontSize: 13, color: InsightrColors.textSecondary)),
         )).toList()),
       ]),
     );
@@ -188,6 +198,20 @@ class _FeedCardWidget extends StatelessWidget {
   final VoidCallback onTap;
   const _FeedCardWidget({required this.card, required this.onTap});
 
+  String _formatDate(String iso) {
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      final now = DateTime.now();
+      final diff = now.difference(dt);
+      if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+      if (diff.inHours < 24) return '${diff.inHours}h ago';
+      if (diff.inDays < 7) return '${diff.inDays}d ago';
+      return DateFormat('MMM d').format(dt);
+    } catch (_) {
+      return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -208,7 +232,7 @@ class _FeedCardWidget extends StatelessWidget {
               )),
             ),
             const SizedBox(width: 8),
-            Text('2h ago', style: GoogleFonts.inter(
+            Text(_formatDate(card.createdAt), style: GoogleFonts.inter(
               fontSize: 10, color: InsightrColors.textMuted,
             )),
             const Spacer(),

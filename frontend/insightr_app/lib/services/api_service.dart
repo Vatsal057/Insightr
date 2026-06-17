@@ -38,16 +38,17 @@ class ApiService {
 
   Future<void> initialize() async {
     // Attempt UDP broadcast discovery
+    RawDatagramSocket? udpSocket;
     try {
-      final udpSocket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 8888);
+      udpSocket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 8888);
       udpSocket.broadcastEnabled = true;
       print('Listening for UDP broadcasts on port 8888...');
-      
+
       bool found = false;
 
       final discoveryFuture = udpSocket.firstWhere((RawSocketEvent event) {
         if (event == RawSocketEvent.read) {
-          final datagram = udpSocket.receive();
+          final datagram = udpSocket!.receive();
           if (datagram != null) {
             final message = utf8.decode(datagram.data);
             if (message.startsWith('INSIGHTR_BACKEND|')) {
@@ -67,7 +68,6 @@ class ApiService {
       }).timeout(const Duration(seconds: 3));
 
       await discoveryFuture;
-      udpSocket.close();
       if (found) return;
     } catch (e) {
       if (e is TimeoutException) {
@@ -75,6 +75,11 @@ class ApiService {
       } else {
         print('UDP discovery failed: $e');
       }
+    } finally {
+      // Always release the socket — without this, a timeout or any thrown
+      // error left port 8888 bound for the lifetime of the app, which could
+      // cause "address already in use" failures on the next hot restart.
+      udpSocket?.close();
     }
 
     try {
@@ -128,6 +133,19 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
+  Future<dynamic> _postLong(String path, Map<String, String> formData) async {
+    final uri = Uri.parse('$_base$path');
+    final response = await _client.post(
+      uri,
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: formData,
+    ).timeout(const Duration(seconds: 60));
+    if (response.statusCode >= 400) {
+      throw ApiException(response.statusCode, response.body);
+    }
+    return jsonDecode(response.body);
+  }
+
   // ─── Feed & Entries ───────────────────────────────────────────────────────
 
   Future<List<FeedCard>> getFeed({int limit = AppConstants.feedLimit}) async {
@@ -157,7 +175,7 @@ class ApiService {
   /// Returns a task_id to poll with [pollStatus].
   Future<String> processUrl(String url) async {
     final data =
-        await _post(AppConstants.processEndpoint, {'url': url});
+        await _postLong(AppConstants.processEndpoint, {'url': url});
     return (data as Map<String, dynamic>)['task_id'] as String? ?? '';
   }
 
@@ -240,8 +258,9 @@ class ApiService {
   }
 
   Future<List<FeedCard>> getCollectionEntries(String name) async {
-    final data =
-        await _get('${AppConstants.collectionsEndpoint}/$name') as List;
+    final data = await _get(
+            '${AppConstants.collectionsEndpoint}/${Uri.encodeComponent(name)}')
+        as List;
     return data
         .map((e) => FeedCard.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -259,8 +278,8 @@ class ApiService {
   }
 
   Future<String> exportCollection(String name) async {
-    final uri =
-        Uri.parse('$_base${AppConstants.exportEndpoint}/collection/$name');
+    final uri = Uri.parse(
+        '$_base${AppConstants.exportEndpoint}/collection/${Uri.encodeComponent(name)}');
     final response = await _client.get(uri);
     if (response.statusCode >= 400) {
       throw ApiException(response.statusCode, response.body);

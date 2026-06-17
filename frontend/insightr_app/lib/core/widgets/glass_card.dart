@@ -66,23 +66,28 @@ class GoldGlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: InsightrColors.glassGold,
-        borderRadius: leftBorderOnly
-            ? const BorderRadius.only(
-                topRight: Radius.circular(InsightrRadii.lg),
-                bottomRight: Radius.circular(InsightrRadii.lg),
-              )
-            : InsightrRadii.lgAll,
-        border: leftBorderOnly
-            ? const Border(
-                left: BorderSide(color: InsightrColors.goldPrimary, width: 3),
-              )
-            : Border.all(color: InsightrColors.borderGold, width: 1),
+    final radius = leftBorderOnly
+        ? const BorderRadius.only(
+            topRight: Radius.circular(InsightrRadii.lg),
+            bottomRight: Radius.circular(InsightrRadii.lg),
+          )
+        : InsightrRadii.lgAll;
+
+    return ClipRRect(
+      borderRadius: radius,
+      child: Container(
+        decoration: BoxDecoration(
+          color: InsightrColors.glassGold,
+          borderRadius: radius,
+          border: leftBorderOnly
+              ? const Border(
+                  left: BorderSide(color: InsightrColors.goldPrimary, width: 3),
+                )
+              : Border.all(color: InsightrColors.borderGold, width: 1),
+        ),
+        padding: padding ?? const EdgeInsets.all(16),
+        child: child,
       ),
-      padding: padding ?? const EdgeInsets.all(16),
-      child: child,
     );
   }
 }

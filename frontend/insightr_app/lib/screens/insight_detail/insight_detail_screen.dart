@@ -378,11 +378,52 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
   }
 
   Widget _buildError() {
-    return Center(child: Padding(
-      padding: const EdgeInsets.all(32),
-      child: Text('Failed to load: $_error',
-        style: GoogleFonts.inter(color: InsightrColors.red), textAlign: TextAlign.center),
-    ));
+    return Scaffold(
+      backgroundColor: InsightrColors.bgDark,
+      appBar: AppBar(
+        backgroundColor: InsightrColors.bgDark,
+        leading: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            margin: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0x12FFFFFF),
+              border: Border.all(color: const Color(0x1AFFFFFF), width: 1),
+            ),
+            child: const Icon(Icons.arrow_back_rounded, size: 16),
+          ),
+        ),
+      ),
+      body: Center(child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          const Icon(Icons.error_outline_rounded, color: InsightrColors.red, size: 48),
+          const SizedBox(height: 16),
+          Text('Failed to load insight', style: GoogleFonts.inter(
+            fontSize: 18, fontWeight: FontWeight.w700, color: InsightrColors.textPrimary,
+          )),
+          const SizedBox(height: 8),
+          Text(_error!, style: GoogleFonts.inter(color: InsightrColors.red, fontSize: 13),
+            textAlign: TextAlign.center),
+          const SizedBox(height: 24),
+          GestureDetector(
+            onTap: () { setState(() { _loading = true; _error = null; }); _load(); },
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              decoration: BoxDecoration(
+                color: const Color(0x1FC9A84C),
+                borderRadius: InsightrRadii.fullAll,
+                border: Border.all(color: InsightrColors.borderGold),
+              ),
+              child: Text('Retry', style: GoogleFonts.inter(
+                fontSize: 14, fontWeight: FontWeight.w600, color: InsightrColors.goldPrimary,
+              )),
+            ),
+          ),
+        ]),
+      )),
+    );
   }
 }
 

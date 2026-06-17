@@ -57,6 +57,7 @@ class _KnowledgeVaultScreenState extends State<KnowledgeVaultScreen>
   }
 
   Future<void> _loadCollections() async {
+    setState(() => _loadingCollections = true);
     try {
       final c = await _api.getCollections();
       setState(() { _collections = c; _loadingCollections = false; });
@@ -165,9 +166,66 @@ class _KnowledgeVaultScreenState extends State<KnowledgeVaultScreen>
             builder: (_) => CollectionDetailScreen(collection: c),
           )),
           onRefresh: _loadCollections,
+          onCreate: () => _showNewCollectionDialog(context),
         )],
       )),
     ]);
+  }
+
+  void _showNewCollectionDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A0A),
+        shape: RoundedRectangleBorder(borderRadius: InsightrRadii.xlAll),
+        title: Text('New Collection', style: GoogleFonts.inter(
+          fontSize: 18, fontWeight: FontWeight.w700, color: InsightrColors.textPrimary,
+        )),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: GoogleFonts.inter(fontSize: 15, color: InsightrColors.textPrimary),
+          decoration: InputDecoration(
+            hintText: 'Collection name',
+            hintStyle: GoogleFonts.inter(color: InsightrColors.textMuted),
+            filled: true,
+            fillColor: const Color(0x0AFFFFFF),
+            border: OutlineInputBorder(
+              borderRadius: InsightrRadii.lgAll,
+              borderSide: const BorderSide(color: Color(0x14FFFFFF)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: InsightrRadii.lgAll,
+              borderSide: const BorderSide(color: InsightrColors.goldPrimary),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: GoogleFonts.inter(color: InsightrColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () async {
+              final name = controller.text.trim();
+              if (name.isEmpty) return;
+              Navigator.pop(context);
+              // Collections need an entry_id; show a snack explaining this limitation
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Add insights to "$name" from any insight\'s detail screen.',
+                  style: GoogleFonts.inter(fontSize: 13)),
+                backgroundColor: const Color(0xFF1E1E10),
+                behavior: SnackBarBehavior.floating,
+              ));
+            },
+            child: Text('Create', style: GoogleFonts.inter(
+              color: InsightrColors.goldPrimary, fontWeight: FontWeight.w700,
+            )),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -269,10 +327,11 @@ class _CollectionsTab extends StatelessWidget {
   final bool loading;
   final void Function(Collection) onTap;
   final Future<void> Function() onRefresh;
+  final VoidCallback onCreate;
 
   const _CollectionsTab({
     required this.collections, required this.loading,
-    required this.onTap, required this.onRefresh,
+    required this.onTap, required this.onRefresh, required this.onCreate,
   });
 
   @override
@@ -289,20 +348,23 @@ class _CollectionsTab extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                     child: Row(children: [
                       const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: const Color(0x1FC9A84C),
-                          borderRadius: InsightrRadii.fullAll,
-                          border: Border.all(color: InsightrColors.borderGold, width: 1),
+                      GestureDetector(
+                        onTap: onCreate,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0x1FC9A84C),
+                            borderRadius: InsightrRadii.fullAll,
+                            border: Border.all(color: InsightrColors.borderGold, width: 1),
+                          ),
+                          child: Row(children: [
+                            const Icon(Icons.add_rounded, size: 16, color: InsightrColors.goldPrimary),
+                            const SizedBox(width: 6),
+                            Text('New Collection', style: GoogleFonts.inter(
+                              fontSize: 12, fontWeight: FontWeight.w700, color: InsightrColors.goldPrimary,
+                            )),
+                          ]),
                         ),
-                        child: Row(children: [
-                          const Icon(Icons.add_rounded, size: 16, color: InsightrColors.goldPrimary),
-                          const SizedBox(width: 6),
-                          Text('New Collection', style: GoogleFonts.inter(
-                            fontSize: 12, fontWeight: FontWeight.w700, color: InsightrColors.goldPrimary,
-                          )),
-                        ]),
                       ),
                     ]),
                   ),

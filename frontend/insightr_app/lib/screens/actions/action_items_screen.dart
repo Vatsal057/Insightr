@@ -44,8 +44,8 @@ class _ActionItemsScreenState extends State<ActionItemsScreen>
     super.dispose();
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  Future<void> _load({bool silent = false}) async {
+    if (!silent) setState(() => _loading = true);
     try {
       final bool? done = switch (_filter) {
         'pending' => false,
@@ -67,7 +67,7 @@ class _ActionItemsScreenState extends State<ActionItemsScreen>
     });
     try {
       await _api.toggleTodo(item.id, done: !item.done);
-      await _load();
+      await _load(silent: true);
     } catch (_) {
       // Revert
       setState(() {
@@ -93,11 +93,7 @@ class _ActionItemsScreenState extends State<ActionItemsScreen>
   Widget build(BuildContext context) {
     final grouped = _grouped;
 
-    return Scaffold(
-      backgroundColor: InsightrColors.bgDark,
-      body: SafeArea(
-        bottom: false,
-        child: Column(children: [
+    return Column(children: [
           // ── Header ──────────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -196,9 +192,7 @@ class _ActionItemsScreenState extends State<ActionItemsScreen>
                         ),
                       ),
           ),
-        ]),
-      ),
-    );
+        ]);
   }
 }
 
