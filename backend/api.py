@@ -120,17 +120,23 @@ async def shutdown_event():
         await async_zc.close()
 
 
+import traceback
+
 # Simple in-memory task store (fine for MVP; swap for Redis/Celery later)
 tasks: dict = {}
 
 
 def _process_task(task_id: str, url: str):
+    print(f"[*] Starting ingestion for task {task_id}: {url}")
     try:
         config = load_config()
         db.init_db(config["db_path"])
         entry_id = run_process(url, config)
         tasks[task_id] = {"status": "completed", "entry_id": entry_id}
+        print(f"[*] Task {task_id} completed successfully. Entry ID: {entry_id}")
     except Exception as e:
+        print(f"[!] Task {task_id} failed with error: {e}")
+        traceback.print_exc()
         tasks[task_id] = {"status": "failed", "error": str(e)}
 
 
