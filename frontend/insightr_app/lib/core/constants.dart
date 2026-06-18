@@ -2,8 +2,8 @@
 /// For Android emulator: localhost = 10.0.2.2
 /// For physical device: replace with your machine's LAN IP
 class AppConstants {
-  // Backend base URL
-  static const String baseUrl = 'http://10.0.2.2:8000';
+  // Backend base URL. Can be overridden via --dart-define=API_BASE_URL=...
+  static const String baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:8000');
 
   // API endpoints
   static const String feedEndpoint = '/api/feed';
