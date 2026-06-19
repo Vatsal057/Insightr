@@ -77,8 +77,10 @@ manually repeated in the note body if they don't fit organically.
 Construct the entire note body using adaptive note blocks.
 Choose the most appropriate block types based on the content rather than forcing
 information into predefined sections.
-
 AVAILABLE COMPONENTS:
+
+  CRITICAL RULE FOR ALL LIST/MULTI-ITEM BLOCKS (bullets, steps, checklist, stat_row, comparison, label_values, timeline):
+  You MUST place each individual item on a NEW LINE (\n). Do NOT combine multiple items on a single line.
 
   key_insight    Highlighted golden card for a high-impact opening. Use this for the most critical thesis, TL;DR, or core idea. 
                  title = A punchy, engaging heading defined by you based on what best hooks the user (e.g. "TL;DR", "The Catch", "Win Condition").
@@ -99,9 +101,9 @@ AVAILABLE COMPONENTS:
   comparison     Two-column layout. First line = "Option A|Option B".
                  Subsequent lines = "left item|right item".
 
-  label_values   Vertical label + value pairs. Format: "Label: value".
+  label_values   Vertical label + value pairs. Format: "Label: value" (one per line).
 
-  timeline       Phases, days, or stages. Format: "Phase: what happens".
+  timeline       Phases, days, or stages. Format: "Phase: what happens" (one per line).
 
   quote          A single memorable line from the creator.
 

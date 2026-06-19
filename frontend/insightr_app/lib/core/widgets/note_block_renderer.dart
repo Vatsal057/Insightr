@@ -385,27 +385,35 @@ class _LabelValuesBlock extends StatelessWidget {
     final valStyle = GoogleFonts.inter(
       fontSize: 13, height: 1.4, color: InsightrColors.textPrimary,
     );
-    return GlassCard(
-      padding: const EdgeInsets.all(16),
+    return GoldGlassCard(
+      leftBorderOnly: false,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _sectionTitle((block.title ?? '').isNotEmpty ? block.title : null),
-        ...items.map((item) {
+        _sectionTitle((block.title ?? '').isNotEmpty ? block.title : 'QUICK FACTS'),
+        ...items.asMap().entries.map((e) {
+          final item = e.value;
+          final isLast = e.key == items.length - 1;
           final idx = item.indexOf(':');
           final lbl = idx >= 0 ? item.substring(0, idx).trim() : item;
           final val = idx >= 0 ? item.substring(idx + 1).trim() : '';
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              SizedBox(
-                width: 110,
-                child: Text('$lbl', style: GoogleFonts.inter(
-                  fontSize: 12, fontWeight: FontWeight.w600,
-                  color: InsightrColors.textSecondary, height: 1.4,
-                )),
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  SizedBox(
+                    width: 100,
+                    child: Text(lbl, style: GoogleFonts.inter(
+                      fontSize: 12, fontWeight: FontWeight.w600,
+                      color: InsightrColors.goldPrimary, height: 1.4,
+                    )),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: _richText(val, valStyle)),
+                ]),
               ),
-              const SizedBox(width: 8),
-              Expanded(child: _richText(val, valStyle)),
-            ]),
+              if (!isLast)
+                const Divider(color: InsightrColors.borderGold, height: 1, thickness: 0.5),
+            ],
           );
         }),
       ]),
