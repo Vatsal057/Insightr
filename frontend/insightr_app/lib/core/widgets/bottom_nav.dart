@@ -27,7 +27,7 @@ class InsightrBottomNav extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Container(
             decoration: BoxDecoration(
-              color: InsightrColors.navBg,
+              color: InsightrColors.navBg.withAlpha(153),
               borderRadius: BorderRadius.circular(32),
               border: Border.all(
                 color: const Color(0x1AFFFFFF), // rgba(255,255,255,0.10)
