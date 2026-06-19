@@ -169,6 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true,
       backgroundColor: InsightrColors.bgDark,
       body: SafeArea(bottom: false, child: _buildBody()),
       floatingActionButton: _navIndex == 0
