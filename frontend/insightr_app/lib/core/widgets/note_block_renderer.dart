@@ -84,16 +84,26 @@ Widget _sectionTitle(String? title) {
 }
 
 List<String> _lines(String content, {String? blockType}) {
-  // Graceful fallback for legacy LLM outputs that combined items onto one line separated by '|'
-  if (!content.contains('\n') && content.contains('|')) {
-    final parts = content.split('|');
-    // For stat_row, a single 'value|label' on one line is valid and should not be split into separate items here.
-    // If it's a stat_row, we only split if there are multiple stats (e.g. 'val|lbl|val|lbl' -> implies error).
-    if (blockType != 'stat_row' || parts.length > 2) {
-      return parts.where((l) => l.trim().isNotEmpty).toList();
+  final rawLines = content.split('\n').where((l) => l.trim().isNotEmpty).toList();
+  final finalLines = <String>[];
+
+  for (final line in rawLines) {
+    if (line.contains('|')) {
+      // For stat_row, a single 'value|label' on one line is valid.
+      if (blockType == 'stat_row') {
+        final parts = line.split('|');
+        if (parts.length <= 2) {
+          finalLines.add(line);
+          continue;
+        }
+      }
+      final parts = line.split('|').map((p) => p.trim()).where((p) => p.isNotEmpty);
+      finalLines.addAll(parts);
+    } else {
+      finalLines.add(line);
     }
   }
-  return content.split('\n').where((l) => l.trim().isNotEmpty).toList();
+  return finalLines;
 }
 
 // ─── Block Renderers ─────────────────────────────────────────────────────────
