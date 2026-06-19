@@ -39,7 +39,7 @@ class NoteBlockRenderer extends StatelessWidget {
 TextSpan _parseBold(String text, TextStyle base) {
   final boldStyle = base.copyWith(
     fontWeight: FontWeight.w800,
-    color: base.color == InsightrColors.textSecondary ? InsightrColors.textPrimary : base.color,
+    color: InsightrColors.white,
   );
 
   final spans = <InlineSpan>[];
@@ -100,7 +100,7 @@ class _KeyInsightBlock extends StatelessWidget {
     return GoldGlassCard(
       leftBorderOnly: true,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _sectionTitle((block.title ?? '').isNotEmpty ? block.title : 'KEY INSIGHT'),
+        _sectionTitle(block.title),
         _richText(block.content, bodyStyle),
       ]),
     );
