@@ -6,7 +6,6 @@ import '../../core/widgets/tag_chip.dart';
 import '../../models/entry.dart';
 import 'deep_research_screen.dart';
 import 'insight_detail_screen.dart';
-import 'topic_map_screen.dart';
 
 class DeepInsightScreen extends StatefulWidget {
   final Entry entry;
@@ -17,8 +16,6 @@ class DeepInsightScreen extends StatefulWidget {
 }
 
 class _DeepInsightScreenState extends State<DeepInsightScreen> {
-  final Set<String> _expanded = {};
-
   @override
   Widget build(BuildContext context) {
     final deep = widget.entry.zoneDeep;
@@ -50,11 +47,11 @@ class _DeepInsightScreenState extends State<DeepInsightScreen> {
 
           // ── Stats row ─────────────────────────────────────────────────────
           Row(children: [
-            Expanded(child: _MiniStat(label: 'CLAIMS', value: '${deep.claims.length}')),
-            const SizedBox(width: 8),
-            Expanded(child: _MiniStat(label: 'GAPS', value: '${deep.missingContext.length}')),
-            const SizedBox(width: 8),
             Expanded(child: _MiniStat(label: 'CONCEPTS', value: '${deep.knowledgeCards.length}')),
+            const SizedBox(width: 8),
+            Expanded(child: _MiniStat(label: 'ARTIFACTS', value: '${deep.referencedArtifacts.length}')),
+            const SizedBox(width: 8),
+            Expanded(child: _MiniStat(label: 'CONNECTIONS', value: '${deep.connections.length}')),
           ]),
           const SizedBox(height: 16),
 
@@ -93,173 +90,6 @@ class _DeepInsightScreenState extends State<DeepInsightScreen> {
             ),
           ),
           const SizedBox(height: 20),
-
-          // ── FEATURE 11: Effort Estimation (full detail) ───────────────────
-          if (deep.effortEstimation != null) ...[
-            _SectionTitle('TIME & EFFORT'),
-            const SizedBox(height: 10),
-            GlassCard(
-              padding: const EdgeInsets.all(16),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Expanded(child: _EffortBox(
-                    icon: Icons.school_rounded,
-                    label: 'To Learn',
-                    value: deep.effortEstimation!.timeToLearn,
-                  )),
-                  const SizedBox(width: 10),
-                  Expanded(child: _EffortBox(
-                    icon: Icons.build_rounded,
-                    label: 'To Implement',
-                    value: deep.effortEstimation!.timeToImplement,
-                  )),
-                ]),
-                const SizedBox(height: 12),
-                Row(children: [
-                  Expanded(child: _EffortMeter(
-                    label: 'Difficulty',
-                    value: deep.effortEstimation!.difficulty,
-                    color: _difficultyColor(deep.effortEstimation!.difficulty),
-                    valueLabel: _difficultyLabel(deep.effortEstimation!.difficulty),
-                  )),
-                  const SizedBox(width: 10),
-                  Expanded(child: _EffortMeter(
-                    label: 'Effort',
-                    value: deep.effortEstimation!.effort,
-                    color: InsightrColors.goldPrimary,
-                    valueLabel: _effortLabel(deep.effortEstimation!.effort),
-                  )),
-                ]),
-                if (deep.effortEstimation!.difficultyRationale != null &&
-                    deep.effortEstimation!.difficultyRationale!.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  const Divider(color: Color(0x0FFFFFFF), height: 1),
-                  const SizedBox(height: 10),
-                  Text(deep.effortEstimation!.difficultyRationale!, style: GoogleFonts.inter(
-                    fontSize: 12, color: InsightrColors.textSecondary, height: 1.5,
-                    fontStyle: FontStyle.italic,
-                  )),
-                ],
-              ]),
-            ),
-            const SizedBox(height: 20),
-          ],
-
-          // ── FEATURE 12: What the Creator Did Not Mention ──────────────────
-          if (deep.missingContext.isNotEmpty) ...[
-            _SectionTitle("WHAT'S MISSING"),
-            const SizedBox(height: 10),
-            ...deep.missingContext.map((m) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: GlassCard(padding: const EdgeInsets.all(14), child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  MissingBadge(category: m.category),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(m.text, style: GoogleFonts.inter(
-                    fontSize: 13, height: 1.5, color: InsightrColors.textPrimary,
-                  ))),
-                ],
-              )),
-            )),
-            const SizedBox(height: 8),
-          ],
-
-          // ── FEATURE 4: Claims Made ────────────────────────────────────────
-          if (deep.claims.isNotEmpty) ...[
-            _SectionTitle('CLAIMS MADE'),
-            const SizedBox(height: 10),
-            ...deep.claims.map((c) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: GlassCard(padding: const EdgeInsets.all(14), child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ClaimBadge(verifiability: c.verifiability),
-                  const SizedBox(width: 10),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(c.claim, style: GoogleFonts.inter(
-                      fontSize: 13, height: 1.5, color: InsightrColors.textPrimary,
-                    )),
-                    if (c.note != null && c.note!.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(c.note!, style: GoogleFonts.inter(
-                        fontSize: 11, height: 1.4, color: InsightrColors.textSecondary,
-                        fontStyle: FontStyle.italic,
-                      )),
-                    ],
-                  ])),
-                ],
-              )),
-            )),
-            const SizedBox(height: 8),
-          ],
-
-          // ── FEATURE 6: Rabbit Hole ────────────────────────────────────────
-          if (deep.rabbitHole != null) ...[
-            _SectionTitle('RABBIT HOLE'),
-            const SizedBox(height: 10),
-
-            // Topic Map Button
-            GestureDetector(
-              onTap: () => Navigator.push(context, MaterialPageRoute(
-                builder: (_) => TopicMapScreen(
-                  centralTopic: deep.topicMap?.mainTopic ?? widget.entry.title,
-                  subtopics: deep.topicMap?.subtopics ?? [],
-                  adjacentTopics: deep.rabbitHole?.adjacentTopics ?? [],
-                ),
-              )),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0x0AFFFFFF),
-                  borderRadius: InsightrRadii.lgAll,
-                  border: Border.all(color: const Color(0x14FFFFFF), width: 1),
-                ),
-                child: Row(children: [
-                  const Icon(Icons.hub_rounded, size: 18, color: InsightrColors.goldPrimary),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text('View Topic Map', style: GoogleFonts.inter(
-                    fontSize: 14, fontWeight: FontWeight.w600,
-                  ))),
-                  const Icon(Icons.chevron_right_rounded, size: 16, color: InsightrColors.textMuted),
-                ]),
-              ),
-            ),
-
-            _AccordionSection(
-              title: 'Follow-Up Questions',
-              icon: Icons.help_outline_rounded,
-              items: deep.rabbitHole!.followUpQuestions,
-              expanded: _expanded.contains('fq'),
-              onToggle: () => setState(() => _expanded.contains('fq') ? _expanded.remove('fq') : _expanded.add('fq')),
-            ),
-            const SizedBox(height: 8),
-            _AccordionSection(
-              title: 'Knowledge Gaps',
-              icon: Icons.warning_amber_rounded,
-              items: deep.rabbitHole!.knowledgeGaps,
-              expanded: _expanded.contains('kg'),
-              onToggle: () => setState(() => _expanded.contains('kg') ? _expanded.remove('kg') : _expanded.add('kg')),
-            ),
-            const SizedBox(height: 8),
-            _AccordionSection(
-              title: 'Adjacent Topics',
-              icon: Icons.category_rounded,
-              items: deep.rabbitHole!.adjacentTopics,
-              expanded: _expanded.contains('at'),
-              onToggle: () => setState(() => _expanded.contains('at') ? _expanded.remove('at') : _expanded.add('at')),
-            ),
-            const SizedBox(height: 8),
-            _AccordionSection(
-              title: 'Advanced Concepts',
-              icon: Icons.science_rounded,
-              items: deep.rabbitHole!.advancedConcepts,
-              expanded: _expanded.contains('ac'),
-              onToggle: () => setState(() => _expanded.contains('ac') ? _expanded.remove('ac') : _expanded.add('ac')),
-            ),
-            const SizedBox(height: 20),
-          ],
 
           // ── FEATURE 8: Knowledge Cards ────────────────────────────────────
           if (deep.knowledgeCards.isNotEmpty) ...[
@@ -365,28 +195,6 @@ class _DeepInsightScreenState extends State<DeepInsightScreen> {
       ),
     );
   }
-
-  static Color _difficultyColor(int d) {
-    if (d <= 2) return InsightrColors.green;
-    if (d == 3) return InsightrColors.goldPrimary;
-    return InsightrColors.red;
-  }
-
-  static String _difficultyLabel(int d) => switch (d) {
-    1 => 'Trivial',
-    2 => 'Easy',
-    3 => 'Moderate',
-    4 => 'Challenging',
-    _ => 'Expert',
-  };
-
-  static String _effortLabel(int e) => switch (e) {
-    1 => 'Minimal',
-    2 => 'Light',
-    3 => 'Moderate',
-    4 => 'High',
-    _ => 'Intense',
-  };
 }
 
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
@@ -422,139 +230,6 @@ class _MiniStat extends StatelessWidget {
           fontSize: 10, fontWeight: FontWeight.w700,
           letterSpacing: 1.0, color: InsightrColors.textSecondary,
         )),
-      ]),
-    );
-  }
-}
-
-class _EffortBox extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  const _EffortBox({required this.icon, required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0x08FFFFFF),
-        borderRadius: InsightrRadii.mdAll,
-        border: Border.all(color: const Color(0x0DFFFFFF)),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Icon(icon, size: 12, color: InsightrColors.goldMuted),
-          const SizedBox(width: 4),
-          Text(label, style: GoogleFonts.inter(
-            fontSize: 9, fontWeight: FontWeight.w700,
-            letterSpacing: 1.0, color: InsightrColors.textMuted,
-          )),
-        ]),
-        const SizedBox(height: 6),
-        Text(value, style: GoogleFonts.inter(
-          fontSize: 13, fontWeight: FontWeight.w700, color: InsightrColors.textPrimary,
-        )),
-      ]),
-    );
-  }
-}
-
-class _EffortMeter extends StatelessWidget {
-  final String label;
-  final int value; // 1-5
-  final Color color;
-  final String valueLabel;
-  const _EffortMeter({
-    required this.label, required this.value,
-    required this.color, required this.valueLabel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0x08FFFFFF),
-        borderRadius: InsightrRadii.mdAll,
-        border: Border.all(color: const Color(0x0DFFFFFF)),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(label, style: GoogleFonts.inter(
-            fontSize: 9, fontWeight: FontWeight.w700,
-            letterSpacing: 1.0, color: InsightrColors.textMuted,
-          )),
-          Text(valueLabel, style: GoogleFonts.inter(
-            fontSize: 10, fontWeight: FontWeight.w700, color: color,
-          )),
-        ]),
-        const SizedBox(height: 8),
-        Row(children: List.generate(5, (i) => Expanded(child: Container(
-          height: 4,
-          margin: EdgeInsets.only(right: i < 4 ? 3 : 0),
-          decoration: BoxDecoration(
-            color: i < value ? color : const Color(0x12FFFFFF),
-            borderRadius: BorderRadius.circular(2),
-          ),
-        )))),
-      ]),
-    );
-  }
-}
-
-class _AccordionSection extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final List<String> items;
-  final bool expanded;
-  final VoidCallback onToggle;
-
-  const _AccordionSection({
-    required this.title, required this.icon, required this.items,
-    required this.expanded, required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      padding: EdgeInsets.zero,
-      child: Column(children: [
-        GestureDetector(
-          onTap: onToggle,
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            child: Row(children: [
-              Icon(icon, size: 16, color: InsightrColors.textSecondary),
-              const SizedBox(width: 8),
-              Expanded(child: Text(title, style: GoogleFonts.inter(
-                fontSize: 13, fontWeight: FontWeight.w600,
-              ))),
-              Text('${items.length}', style: GoogleFonts.inter(
-                fontSize: 11, color: InsightrColors.textMuted,
-              )),
-              const SizedBox(width: 6),
-              Icon(expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                color: InsightrColors.textSecondary, size: 18),
-            ]),
-          ),
-        ),
-        if (expanded && items.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-            child: Column(children: items.map((item) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 5),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Padding(padding: const EdgeInsets.only(top: 6, right: 8),
-                  child: Container(width: 4, height: 4, decoration: const BoxDecoration(
-                    color: InsightrColors.goldMuted, shape: BoxShape.circle,
-                  ))),
-                Expanded(child: Text(item, style: GoogleFonts.inter(
-                  fontSize: 13, color: InsightrColors.textSecondary, height: 1.5,
-                ))),
-              ]),
-            )).toList()),
-          ),
       ]),
     );
   }

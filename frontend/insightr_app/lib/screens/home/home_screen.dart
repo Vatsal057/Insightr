@@ -239,23 +239,7 @@ class _FeedCardWidget extends StatelessWidget {
           // Stats row
           Wrap(spacing: 8, runSpacing: 6, children: [
             if (card.actionItemCount > 0) _StatPill('${card.actionItemCount} actions'),
-            if (card.implementationStepCount > 0) _StatPill('${card.implementationStepCount} steps'),
-            if (card.toolCount > 0) _StatPill('${card.toolCount} tools'),
           ]),
-          if (card.effortPill != null) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 14),
-              decoration: BoxDecoration(
-                color: const Color(0x14C9A84C),
-                borderRadius: InsightrRadii.fullAll,
-                border: Border.all(color: const Color(0x2EC9A84C), width: 1),
-              ),
-              child: Text(card.effortPill!.label, style: GoogleFonts.inter(
-                fontSize: 12, color: InsightrColors.goldMuted,
-              )),
-            ),
-          ],
           if (card.topAction != null) ...[
             const SizedBox(height: 8),
             Container(

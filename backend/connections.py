@@ -41,16 +41,16 @@ def _normalize(items: List[str]) -> set:
 
 
 def _entry_keywords(entry: KnowledgeEntry, top_n: int = KEYWORDS_PER_ENTRY) -> set:
-    """Extracts keywords from an entry's takeaway + claims text."""
-    text_parts = [entry.summary.headline, entry.summary.body]
-    text_parts.extend(c.claim for c in entry.claims)
+    """Extracts keywords from an entry's title, hook, next_step, and dynamic note blocks."""
+    text_parts = [entry.title, entry.hook, entry.next_step]
+    text_parts.extend(b.content for b in entry.note_blocks if b.content)
     return set(extract_keywords(" ".join(text_parts), top_n=top_n))
 
 
 def find_connections(db_path: str, entry: KnowledgeEntry, entry_id: int,
                       max_connections: int = 3, min_score: int = 2) -> List[Connection]:
     new_tags = _normalize(entry.tags)
-    new_topics = _normalize([entry.topic_map.main_topic] + entry.topic_map.subtopics)
+    new_topics = _normalize(c.name for c in entry.concepts)
     new_artifacts = _normalize(a.name for a in entry.referenced_artifacts)
     new_keywords = _entry_keywords(entry)
 
@@ -59,7 +59,7 @@ def find_connections(db_path: str, entry: KnowledgeEntry, entry_id: int,
     scored = []
     for c in candidates:
         c_tags = _normalize(c["tags"])
-        c_topics = _normalize([c["topic_map"].get("main_topic", "")] + c["topic_map"].get("subtopics", []))
+        c_topics = _normalize(c.get("concepts", []))
         c_artifacts = _normalize(c.get("artifacts", []))
         c_keywords = set(c.get("keywords", []))
 

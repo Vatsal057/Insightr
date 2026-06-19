@@ -9,7 +9,6 @@ import '../../models/action_item.dart';
 import '../../models/entry.dart';
 import '../../services/api_service.dart';
 import 'deep_insight_screen.dart';
-import 'topic_map_screen.dart';
 
 class InsightDetailScreen extends StatefulWidget {
   final int entryId;
@@ -119,41 +118,6 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
               Text(e.title, style: Theme.of(context).textTheme.titleLarge?.copyWith(height: 1.2)),
               const SizedBox(height: 14),
 
-              // ── Effort pills ─────────────────────────────────────────────
-              if (grab.effortPill != null)
-                Row(children: [
-                  Text('Effort', style: GoogleFonts.inter(
-                    fontSize: 13, color: InsightrColors.textSecondary,
-                  )),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0x1AC9A84C),
-                      borderRadius: InsightrRadii.fullAll,
-                      border: Border.all(color: InsightrColors.borderGold, width: 1),
-                    ),
-                    child: Text(
-                      grab.effortPill!.label.split('·').last.trim(),
-                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600,
-                        color: InsightrColors.goldPrimary),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (grab.effortPill!.timeToLearn.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: const Color(0x0DFFFFFF),
-                        borderRadius: InsightrRadii.fullAll,
-                        border: Border.all(color: const Color(0x14FFFFFF), width: 1),
-                      ),
-                      child: Text(grab.effortPill!.timeToLearn,
-                        style: GoogleFonts.inter(fontSize: 12, color: InsightrColors.textSecondary)),
-                    ),
-                ]),
-              const SizedBox(height: 16),
-
               // ── ZONE 1: DO THIS NOW ───────────────────────────────────────
               if (grab.topAction != null)
                 GoldGlassCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -192,47 +156,15 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
                 ])),
               const SizedBox(height: 16),
 
-              // ── Core Takeaway ─────────────────────────────────────────────
-              if (substance.coreTakeaway != null)
-                GoldGlassCard(leftBorderOnly: true, child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('CORE TAKEAWAY', style: GoogleFonts.inter(
-                      fontSize: 10, fontWeight: FontWeight.w700,
-                      letterSpacing: 1.5, color: InsightrColors.goldMuted,
-                    )),
-                    const SizedBox(height: 8),
-                    Text(substance.coreTakeaway!.body, style: GoogleFonts.inter(
-                      fontSize: 14, height: 1.6, color: InsightrColors.textPrimary,
-                    )),
-                  ],
-                )),
-              const SizedBox(height: 16),
-
               // ── Stats row ─────────────────────────────────────────────────
-              if (substance.actionItems.isNotEmpty || substance.implementationPlan.isNotEmpty || substance.toolsResources.isNotEmpty)
+              if (substance.actionItems.isNotEmpty)
                 Row(children: [
-                  if (substance.actionItems.isNotEmpty) ...[
-                    Expanded(child: _StatBox(
-                      value: '${substance.actionItems.length}',
-                      label: 'Actions',
-                    )),
-                    const SizedBox(width: 10),
-                  ],
-                  if (substance.implementationPlan.isNotEmpty) ...[
-                    Expanded(child: _StatBox(
-                      value: '${substance.implementationPlan.length}',
-                      label: 'Steps',
-                    )),
-                    const SizedBox(width: 10),
-                  ],
-                  if (substance.toolsResources.isNotEmpty)
-                    Expanded(child: _StatBox(
-                      value: '${substance.toolsResources.length}',
-                      label: 'Tools',
-                    )),
+                  Expanded(child: _StatBox(
+                    value: '${substance.actionItems.length}',
+                    label: 'Actions',
+                  )),
                 ]),
-              if (substance.actionItems.isNotEmpty || substance.implementationPlan.isNotEmpty || substance.toolsResources.isNotEmpty)
+              if (substance.actionItems.isNotEmpty)
                 const SizedBox(height: 20),
 
               // ── Adaptive NoteBlocks ───────────────────────────────────────
@@ -243,101 +175,6 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
                 const SizedBox(height: 4),
                 _ActionItemsSection(items: substance.actionItems),
                 const SizedBox(height: 16),
-              ],
-
-              // ── Implementation Plan ───────────────────────────────────────
-              if (substance.implementationPlan.isNotEmpty &&
-                  !substance.noteBlocks.any((b) => b.blockType == 'steps'))
-                _ImplementationPlanSection(steps: substance.implementationPlan),
-
-              // ── Key Points (if not covered by note_blocks) ────────────────
-              if (substance.keyPoints.isNotEmpty &&
-                  !substance.noteBlocks.any((b) =>
-                      b.blockType == 'bullets' || b.blockType == 'steps'))
-                _KeyPointsSection(keyPoints: substance.keyPoints),
-
-              // ── Tools & Resources ─────────────────────────────────────────
-              if (substance.toolsResources.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                _ToolsSection(tools: substance.toolsResources),
-                const SizedBox(height: 16),
-              ],
-
-              // ── Topic Map section ─────────────────────────────────────────
-              Text('TOPIC MAP', style: GoogleFonts.inter(
-                fontSize: 10, fontWeight: FontWeight.w700,
-                letterSpacing: 1.5, color: InsightrColors.goldMuted,
-              )),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () => Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => TopicMapScreen(
-                    centralTopic: _entry!.zoneDeep.topicMap?.mainTopic ?? _entry!.title,
-                    subtopics: _entry!.zoneDeep.topicMap?.subtopics ?? _entry!.tags,
-                    adjacentTopics: _entry!.zoneDeep.rabbitHole?.adjacentTopics ?? [],
-                  ),
-                )),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: const Color(0x0AFFFFFF),
-                    borderRadius: InsightrRadii.xlAll,
-                    border: Border.all(color: const Color(0x14FFFFFF), width: 1),
-                  ),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Container(
-                        width: 32, height: 32,
-                        decoration: BoxDecoration(
-                          color: const Color(0x1AC9A84C),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: InsightrColors.borderGold),
-                        ),
-                        child: const Icon(Icons.hub_rounded, color: InsightrColors.goldPrimary, size: 16),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(_entry!.zoneDeep.topicMap?.mainTopic ?? _entry!.title,
-                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700,
-                            color: InsightrColors.textPrimary),
-                          maxLines: 1, overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          '${(_entry!.zoneDeep.topicMap?.subtopics.length ?? 0)} subtopics',
-                          style: GoogleFonts.inter(fontSize: 12, color: InsightrColors.textSecondary),
-                        ),
-                      ])),
-                      const Icon(Icons.arrow_forward_rounded, size: 14, color: InsightrColors.goldMuted),
-                    ]),
-                    if ((_entry!.zoneDeep.topicMap?.subtopics ?? []).isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Wrap(spacing: 6, runSpacing: 6, children: (_entry!.zoneDeep.topicMap!.subtopics).take(4).map((s) =>
-                        Container(
-                          padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 10),
-                          decoration: BoxDecoration(
-                            color: const Color(0x08FFFFFF),
-                            borderRadius: InsightrRadii.fullAll,
-                            border: Border.all(color: const Color(0x10FFFFFF)),
-                          ),
-                          child: Text(s, style: GoogleFonts.inter(fontSize: 10, color: InsightrColors.textMuted)),
-                        )
-                      ).toList()),
-                    ],
-                  ]),
-                ),
-              ),
-
-              // ── FEATURE 12 TEASER: What's missing ────────────────────────
-              if (_entry!.zoneDeep.missingContext.isNotEmpty) ...[
-                _MissingContextTeaser(
-                  items: _entry!.zoneDeep.missingContext.take(2).toList(),
-                  total: _entry!.zoneDeep.missingContext.length,
-                  onSeeAll: () => Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => DeepInsightScreen(entry: _entry!),
-                  )),
-                ),
-                const SizedBox(height: 12),
               ],
 
               const SizedBox(height: 12),
@@ -560,196 +397,6 @@ class _ActionItemsSectionState extends State<_ActionItemsSection> {
   }
 }
 
-// ─── Implementation Plan ─────────────────────────────────────────────────────
-
-class _ImplementationPlanSection extends StatelessWidget {
-  final List<ImplementationStep> steps;
-  const _ImplementationPlanSection({required this.steps});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      GlassCard(
-        padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('IMPLEMENTATION PLAN', style: GoogleFonts.inter(
-            fontSize: 10, fontWeight: FontWeight.w700,
-            letterSpacing: 1.5, color: InsightrColors.goldMuted,
-          )),
-          const SizedBox(height: 10),
-          ...steps.map((step) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(
-                width: 24, height: 24,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0x1FC9A84C),
-                  border: Border.all(color: const Color(0x40C9A84C), width: 1),
-                ),
-                child: Center(child: Text('${step.stepNumber}', style: GoogleFonts.inter(
-                  fontSize: 12, fontWeight: FontWeight.w700, color: InsightrColors.goldPrimary,
-                ))),
-              ),
-              const SizedBox(width: 12),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(step.title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700,
-                  color: InsightrColors.textPrimary)),
-                const SizedBox(height: 2),
-                Text(step.description, style: GoogleFonts.inter(
-                  fontSize: 12, color: InsightrColors.textSecondary, height: 1.4,
-                )),
-                if (step.timeEstimate != null) ...[
-                  const SizedBox(height: 4),
-                  Text(step.timeEstimate!, style: GoogleFonts.inter(
-                    fontSize: 11, color: InsightrColors.goldMuted, fontWeight: FontWeight.w600,
-                  )),
-                ],
-              ])),
-            ]),
-          )),
-        ]),
-      ),
-      const SizedBox(height: 16),
-    ]);
-  }
-}
-
-// ─── Key Points Fallback ─────────────────────────────────────────────────────
-
-class _KeyPointsSection extends StatelessWidget {
-  final String keyPoints;
-  const _KeyPointsSection({required this.keyPoints});
-
-  @override
-  Widget build(BuildContext context) {
-    final lines = keyPoints.split('\n').where((l) => l.trim().isNotEmpty).toList();
-    // Strip leading markdown bullets if present
-    final cleaned = lines.map((l) {
-      final t = l.trim();
-      if (t.startsWith('- ') || t.startsWith('• ')) return t.substring(2);
-      if (t.startsWith('* ')) return t.substring(2);
-      return t;
-    }).toList();
-
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      GlassCard(
-        padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('KEY POINTS', style: GoogleFonts.inter(
-            fontSize: 10, fontWeight: FontWeight.w700,
-            letterSpacing: 1.5, color: InsightrColors.goldMuted,
-          )),
-          const SizedBox(height: 10),
-          ...cleaned.map((line) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 7, right: 10),
-                child: Container(
-                  width: 4, height: 4,
-                  decoration: const BoxDecoration(
-                    color: InsightrColors.goldPrimary, shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-              Expanded(child: _RichLine(text: line)),
-            ]),
-          )),
-        ]),
-      ),
-      const SizedBox(height: 16),
-    ]);
-  }
-}
-
-class _RichLine extends StatelessWidget {
-  final String text;
-  const _RichLine({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    final base = GoogleFonts.inter(
-      fontSize: 13, height: 1.5, color: InsightrColors.textSecondary,
-    );
-    final boldStyle = base.copyWith(
-      fontWeight: FontWeight.w700, color: InsightrColors.textPrimary,
-    );
-    final spans = <InlineSpan>[];
-    final regex = RegExp(r'\*\*(.+?)\*\*');
-    int last = 0;
-    for (final match in regex.allMatches(text)) {
-      if (match.start > last) spans.add(TextSpan(text: text.substring(last, match.start), style: base));
-      spans.add(TextSpan(text: match.group(1), style: boldStyle));
-      last = match.end;
-    }
-    if (last < text.length) spans.add(TextSpan(text: text.substring(last), style: base));
-    return RichText(text: TextSpan(children: spans.isEmpty ? [TextSpan(text: text, style: base)] : spans));
-  }
-}
-
-// ─── Tools Section ───────────────────────────────────────────────────────────
-
-class _ToolsSection extends StatelessWidget {
-  final List<ToolResource> tools;
-  const _ToolsSection({required this.tools});
-
-  static const _typeIcons = {
-    'tool': Icons.build_rounded,
-    'website': Icons.language_rounded,
-    'course': Icons.school_rounded,
-    'platform': Icons.apps_rounded,
-    'software': Icons.computer_rounded,
-    'service': Icons.miscellaneous_services_rounded,
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      padding: const EdgeInsets.all(16),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('TOOLS & RESOURCES', style: GoogleFonts.inter(
-          fontSize: 10, fontWeight: FontWeight.w700,
-          letterSpacing: 1.5, color: InsightrColors.goldMuted,
-        )),
-        const SizedBox(height: 10),
-        ...tools.map((t) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(
-              width: 32, height: 32,
-              decoration: BoxDecoration(
-                color: const Color(0x14C9A84C),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0x28C9A84C)),
-              ),
-              child: Icon(
-                _typeIcons[t.type] ?? Icons.link_rounded,
-                size: 15, color: InsightrColors.goldPrimary,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(t.name, style: GoogleFonts.inter(
-                fontSize: 13, fontWeight: FontWeight.w600,
-                color: InsightrColors.textPrimary,
-              )),
-              if (t.description.isNotEmpty)
-                Text(t.description, style: GoogleFonts.inter(
-                  fontSize: 12, color: InsightrColors.textSecondary, height: 1.4,
-                )),
-              if (t.url != null)
-                Text(t.url!, style: GoogleFonts.inter(
-                  fontSize: 11, color: InsightrColors.goldMuted,
-                ), overflow: TextOverflow.ellipsis, maxLines: 1),
-            ])),
-          ]),
-        )),
-      ]),
-    );
-  }
-}
-
 // ─── Stat Box ─────────────────────────────────────────────────────────────────
 
 class _StatBox extends StatelessWidget {
@@ -770,97 +417,6 @@ class _StatBox extends StatelessWidget {
           fontSize: 11, color: InsightrColors.textSecondary,
         )),
       ]),
-    );
-  }
-}
-
-// ─── Feature 12 Teaser ───────────────────────────────────────────────────────
-
-class _MissingContextTeaser extends StatelessWidget {
-  final List<MissingContext> items;
-  final int total;
-  final VoidCallback onSeeAll;
-
-  const _MissingContextTeaser({
-    required this.items,
-    required this.total,
-    required this.onSeeAll,
-  });
-
-  static const _catColors = <String, Color>{
-    'risk':               Color(0xFFE05C4A),
-    'limitation':         Color(0xFFD07840),
-    'trade_off':          Color(0xFFB8A030),
-    'assumption':         Color(0xFF6A9AD4),
-    'alternative':        Color(0xFF5C9A6A),
-    'additional_context': Color(0xFF8A8AAA),
-  };
-
-  static const _catLabels = <String, String>{
-    'risk':               'RISK',
-    'limitation':         'LIMIT',
-    'trade_off':          'TRADE-OFF',
-    'assumption':         'ASSUMPTION',
-    'alternative':        'ALTERNATIVE',
-    'additional_context': 'INFO',
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onSeeAll,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: const Color(0x0AFFFFFF),
-          borderRadius: InsightrRadii.lgAll,
-          border: Border.all(color: const Color(0x14FFFFFF), width: 1),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            const Icon(Icons.lightbulb_outline_rounded, size: 13, color: InsightrColors.goldMuted),
-            const SizedBox(width: 6),
-            Text("WHAT'S MISSING", style: GoogleFonts.inter(
-              fontSize: 9, fontWeight: FontWeight.w700,
-              letterSpacing: 1.5, color: InsightrColors.goldMuted,
-            )),
-            const Spacer(),
-            if (total > items.length)
-              Text('See all $total →', style: GoogleFonts.inter(
-                fontSize: 10, color: InsightrColors.goldMuted, fontWeight: FontWeight.w600,
-              )),
-          ]),
-          const SizedBox(height: 10),
-          ...items.map((m) {
-            final color = _catColors[m.category] ?? InsightrColors.textSecondary;
-            final label = _catLabels[m.category] ?? m.category.toUpperCase();
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 6),
-                  decoration: BoxDecoration(
-                    color: color.withAlpha(30),
-                    borderRadius: InsightrRadii.fullAll,
-                    border: Border.all(color: color.withAlpha(80)),
-                  ),
-                  child: Text(label, style: GoogleFonts.inter(
-                    fontSize: 8, fontWeight: FontWeight.w800,
-                    color: color, letterSpacing: 0.5,
-                  )),
-                ),
-                const SizedBox(width: 8),
-                Expanded(child: Text(m.text,
-                  style: GoogleFonts.inter(
-                    fontSize: 12, color: InsightrColors.textSecondary, height: 1.4,
-                  ),
-                  maxLines: 2, overflow: TextOverflow.ellipsis,
-                )),
-              ]),
-            );
-          }),
-        ]),
-      ),
     );
   }
 }

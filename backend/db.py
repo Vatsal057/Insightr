@@ -12,8 +12,7 @@ from typing import List, Optional
 
 from schema import (
     KnowledgeEntry, Connection, Concept, TypeSpecificField,
-    ImplementationStep, ToolResource, RabbitHole, ReferencedArtifact,
-    EffortEstimation, MissingContextItem, NoteBlock,
+    ReferencedArtifact, NoteBlock,
 )
 from keywords import extract_keywords
 
@@ -202,14 +201,11 @@ def _get_or_create_tag(conn: sqlite3.Connection, name: str) -> int:
 def save_entry(db_path: str, entry: KnowledgeEntry) -> int:
     conn = get_connection(db_path)
     try:
-        # Build keyword corpus from headline + claims + tools + rabbit hole
-        keyword_text = " ".join(filter(None, [
-            entry.summary.headline,
-            entry.summary.body,
-            *[c.claim for c in entry.claims],
-            *[t.name for t in entry.tools_resources],
-            *entry.rabbit_hole.follow_up_questions,
-        ]))
+        # Build keyword corpus from blocks, concepts, artifacts
+        block_text = " ".join(b.content for b in entry.note_blocks)
+        concept_names = " ".join(c.name for c in entry.concepts)
+        artifact_names = " ".join(a.name for a in entry.referenced_artifacts)
+        keyword_text = " ".join(filter(None, [entry.title, block_text, concept_names, artifact_names]))
         entry_keywords = extract_keywords(keyword_text)
 
         cur = conn.execute(
@@ -230,16 +226,16 @@ def save_entry(db_path: str, entry: KnowledgeEntry) -> int:
                 entry.content_type,
                 json.dumps([f.model_dump() for f in entry.type_specific_fields]),
                 entry.hook,
-                entry.summary.model_dump_json(),
-                entry.key_points,
-                json.dumps([s.model_dump() for s in entry.implementation_plan]),
-                json.dumps([t.model_dump() for t in entry.tools_resources]),
-                entry.rabbit_hole.model_dump_json(),
+                '{}', # deprecated summary
+                '', # deprecated key_points
+                '[]', # deprecated implementation_plan
+                '[]', # deprecated tools_resources
+                '{}', # deprecated rabbit_hole
                 json.dumps([a.model_dump() for a in entry.referenced_artifacts]),
-                entry.topic_map.model_dump_json(),
-                entry.effort_estimation.model_dump_json() if entry.effort_estimation else None,
-                json.dumps([m.model_dump() for m in entry.missing_context]),
-                json.dumps(entry.rabbit_hole.follow_up_questions),  # legacy explore_further
+                '{}', # deprecated topic_map
+                None, # deprecated effort_estimation
+                '[]', # deprecated missing_context
+                '[]', # deprecated explore_further
                 entry.next_step,
                 json.dumps(entry_keywords),
                 json.dumps([b.model_dump() for b in entry.note_blocks]),
@@ -261,16 +257,13 @@ def save_entry(db_path: str, entry: KnowledgeEntry) -> int:
                 (entry_id, item.text, int(item.done), item.priority, item.time_estimate),
             )
 
-        for claim in entry.claims:
-            conn.execute(
-                "INSERT INTO claims (entry_id, claim, verifiability, note) VALUES (?, ?, ?, ?)",
-                (entry_id, claim.claim, claim.verifiability, claim.note),
-            )
 
-        # FTS index — include tool names and action items for searchability
-        claims_text = " ".join(c.claim for c in entry.claims)
+
+        # FTS index — include blocks, concepts, artifacts, action items
+        blocks_text = " ".join(b.content for b in entry.note_blocks)
         tags_text = " ".join(entry.tags)
-        tools_text = " ".join(t.name for t in entry.tools_resources)
+        artifacts_text = " ".join(a.name for a in entry.referenced_artifacts)
+        concepts_text = " ".join(c.name for c in entry.concepts)
         action_items_text = " ".join(a.text for a in entry.action_items)
         conn.execute(
             """
@@ -280,11 +273,11 @@ def save_entry(db_path: str, entry: KnowledgeEntry) -> int:
             (
                 entry_id,
                 entry.title,
-                f"{entry.summary.headline} {entry.summary.body}",
-                entry.key_points,
-                claims_text,
+                blocks_text, # using summary_text for blocks
+                concepts_text, # using key_points for concepts
+                '', # deprecated claims
                 tags_text,
-                tools_text,
+                artifacts_text, # using tools_text for artifacts
                 action_items_text,
             ),
         )
@@ -337,12 +330,7 @@ def _row_to_entry(conn: sqlite3.Connection, row: sqlite3.Row) -> KnowledgeEntry:
         )
     ]
 
-    claims = [
-        {"claim": r["claim"], "verifiability": r["verifiability"], "note": r["note"]}
-        for r in conn.execute(
-            "SELECT claim, verifiability, note FROM claims WHERE entry_id = ? ORDER BY id", (entry_id,)
-        )
-    ]
+
 
     connections = [
         Connection(entry_id=r["related_entry_id"], title=r["title"], reason=r["reason"])
@@ -376,25 +364,6 @@ def _row_to_entry(conn: sqlite3.Connection, row: sqlite3.Row) -> KnowledgeEntry:
         except Exception:
             return default
 
-    implementation_plan = [
-        ImplementationStep(**s)
-        for s in _parse_json(row["implementation_plan"] if "implementation_plan" in row.keys() else None, [])
-    ]
-    tools_resources = [
-        ToolResource(**t)
-        for t in _parse_json(row["tools_resources"] if "tools_resources" in row.keys() else None, [])
-    ]
-    rabbit_hole_raw = _parse_json(row["rabbit_hole"] if "rabbit_hole" in row.keys() else None, {})
-    rabbit_hole = RabbitHole(**rabbit_hole_raw) if rabbit_hole_raw else RabbitHole()
-
-    effort_raw = row["effort_estimation"] if "effort_estimation" in row.keys() else None
-    effort_estimation = EffortEstimation(**json.loads(effort_raw)) if effort_raw else None
-
-    missing_context = [
-        MissingContextItem(**m)
-        for m in _parse_json(row["missing_context"] if "missing_context" in row.keys() else None, [])
-    ]
-
     note_blocks = [
         NoteBlock(**b)
         for b in _parse_json(row["note_blocks"] if "note_blocks" in row.keys() else None, [])
@@ -410,20 +379,11 @@ def _row_to_entry(conn: sqlite3.Connection, row: sqlite3.Row) -> KnowledgeEntry:
         content_type=row["content_type"],
         type_specific_fields=[TypeSpecificField(**f) for f in _parse_json(row["type_specific_fields"], [])],
         hook=hook,
-        summary=json.loads(row["summary"]),
-        key_points=row["key_points"],
         action_items=action_items,
-        implementation_plan=implementation_plan,
-        claims=claims,
-        tools_resources=tools_resources,
-        rabbit_hole=rabbit_hole,
         referenced_artifacts=[
             ReferencedArtifact(**a)
             for a in _parse_json(row["referenced_artifacts"], [])
         ],
-        topic_map=json.loads(row["topic_map"]),
-        effort_estimation=effort_estimation,
-        missing_context=missing_context,
         next_step=row["next_step"],
         note_blocks=note_blocks,
         created_at=row["created_at"],
@@ -617,18 +577,22 @@ def get_all_entries_summary(db_path: str, exclude_id: Optional[int] = None) -> L
     conn = get_connection(db_path)
     try:
         rows = conn.execute(
-            "SELECT id, title, field, content_type, topic_map, referenced_artifacts, tools_resources, keywords FROM entries"
+            "SELECT id, title, field, content_type, referenced_artifacts, keywords FROM entries"
         ).fetchall()
         result = []
         for row in rows:
             if exclude_id is not None and row["id"] == exclude_id:
                 continue
-            topic_map = json.loads(row["topic_map"])
             artifacts = [a["name"] for a in json.loads(row["referenced_artifacts"] or "[]")]
-            tools = [t["name"] for t in json.loads(row["tools_resources"] or "[]")]
             tags = [
                 r["name"] for r in conn.execute(
                     "SELECT t.name FROM tags t JOIN entry_tags et ON et.tag_id = t.id WHERE et.entry_id = ?",
+                    (row["id"],),
+                )
+            ]
+            concepts = [
+                r["name"] for r in conn.execute(
+                    "SELECT c.name FROM concepts c JOIN entry_concepts ec ON ec.concept_id = c.id WHERE ec.entry_id = ?",
                     (row["id"],),
                 )
             ]
@@ -637,9 +601,9 @@ def get_all_entries_summary(db_path: str, exclude_id: Optional[int] = None) -> L
                 "title": row["title"],
                 "field": row["field"],
                 "content_type": row["content_type"],
-                "topic_map": topic_map,
                 "tags": tags,
-                "artifacts": artifacts + tools,
+                "artifacts": artifacts,
+                "concepts": concepts,
                 "keywords": json.loads(row["keywords"] or "[]"),
             })
         return result
@@ -755,36 +719,15 @@ def get_entries_for_concept(db_path: str, concept_id: int) -> List[sqlite3.Row]:
 # ---------------------------------------------------------------------------
 
 def get_deep_research_prompt(db_path: str, entry_id: int) -> Optional[str]:
-    """Generates a deep research prompt dynamically from the entry's rabbit hole data."""
+    """Generates a deep research prompt dynamically from the entry."""
     conn = get_connection(db_path)
     try:
-        row = conn.execute("SELECT title, rabbit_hole FROM entries WHERE id = ?", (entry_id,)).fetchone()
-        if not row or not row["rabbit_hole"]:
+        row = conn.execute("SELECT title FROM entries WHERE id = ?", (entry_id,)).fetchone()
+        if not row:
             return None
         
-        rabbit_hole = json.loads(row["rabbit_hole"])
         title = row["title"]
-        
-        questions = rabbit_hole.get("follow_up_questions", [])
-        gaps = rabbit_hole.get("knowledge_gaps", [])
-        adjacent = rabbit_hole.get("adjacent_topics", [])
-        advanced = rabbit_hole.get("advanced_concepts", [])
-        
-        if not any([questions, gaps, adjacent, advanced]):
-            return None
-            
-        prompt = f"You are a research assistant. I just learned about '{title}'.\n\n"
-        
-        if questions:
-            prompt += "Here are some follow-up questions I have:\n" + "\n".join(f"- {q}" for q in questions) + "\n\n"
-        if gaps:
-            prompt += "And here are some specific knowledge gaps I need filled:\n" + "\n".join(f"- {g}" for g in gaps) + "\n\n"
-        if adjacent:
-            prompt += "I'm also interested in exploring these adjacent topics:\n" + "\n".join(f"- {a}" for a in adjacent) + "\n\n"
-        if advanced:
-            prompt += "As well as these advanced concepts:\n" + "\n".join(f"- {a}" for a in advanced) + "\n\n"
-            
-        prompt += "Please act as an expert and provide a comprehensive deep dive covering these specific areas."
+        prompt = f"You are a research assistant. I just learned about '{title}'.\n\nPlease provide a comprehensive deep dive covering advanced concepts and adjacent topics related to this."
         return prompt
     finally:
         conn.close()

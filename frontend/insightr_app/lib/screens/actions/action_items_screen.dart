@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme.dart';
-import '../../core/widgets/glass_card.dart';
 import '../../models/action_item.dart';
 import '../../services/api_service.dart';
 import '../insight_detail/insight_detail_screen.dart';

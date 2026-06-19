@@ -1,5 +1,5 @@
-# Use a lightweight Python base image
-FROM python:3.10-slim
+# Use Python 3.11 base image to support numpy>=2.3.0 which requires Python 3.11+
+FROM python:3.11
 
 # Install system dependencies (ffmpeg and tesseract-ocr are required by the pipeline)
 RUN apt-get update && apt-get install -y \
@@ -16,9 +16,10 @@ ENV HOME=/home/user \
 
 WORKDIR $HOME/app
 
-# Copy requirements and install Python dependencies
+# Upgrade pip and copy requirements
 COPY --chown=user requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir --user -r requirements.txt
 
 # Copy the rest of the backend files
 COPY --chown=user . .

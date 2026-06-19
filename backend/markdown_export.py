@@ -40,59 +40,12 @@ def entry_to_markdown(entry: KnowledgeEntry) -> str:
         for block in entry.note_blocks:
             lines += _render_block(block)
         lines.append("")
-    else:
-        # Fallback for entries saved before note_blocks was introduced
-        lines += _legacy_render(entry)
-
-    # ── Fixed footer fields ─────────────────────────────────────────────────
-    # Rabbit Hole — always at the bottom, not part of the adaptive body
-    rh = entry.rabbit_hole
-    if any([rh.follow_up_questions, rh.knowledge_gaps, rh.adjacent_topics, rh.advanced_concepts]):
-        lines.append("## Go Deeper")
-        if rh.follow_up_questions:
-            lines.append("**Questions worth exploring**")
-            for q in rh.follow_up_questions:
-                lines.append(f"- {q}")
-        if rh.knowledge_gaps:
-            lines.append("\n**What was left out**")
-            for g in rh.knowledge_gaps:
-                lines.append(f"- {g}")
-        if rh.adjacent_topics:
-            lines.append("\n**Adjacent topics**")
-            for t in rh.adjacent_topics:
-                lines.append(f"- {t}")
-        if rh.advanced_concepts:
-            lines.append("\n**Advanced concepts**")
-            for c in rh.advanced_concepts:
-                lines.append(f"- {c}")
-        lines.append("")
-
-    # What the Creator Didn't Mention
-    if entry.missing_context:
-        lines.append("## What the Creator Didn't Mention")
-        for m in entry.missing_context:
-            lines.append(f"- **[{m.category}]** {m.text}")
-        lines.append("")
 
     # Knowledge Cards
     if entry.concepts:
         lines.append("## Knowledge Cards")
         for c in entry.concepts:
             lines.append(f"- **[{c.concept_type}] {c.name}** — {c.summary}")
-        lines.append("")
-
-    # Time & Effort
-    if entry.effort_estimation:
-        e = entry.effort_estimation
-        lines += [
-            "## Time & Effort",
-            f"- **Learn:** {e.time_to_learn}",
-            f"- **Implement:** {e.time_to_implement}",
-            f"- **Difficulty:** {'★' * e.difficulty}{'☆' * (5 - e.difficulty)} ({e.difficulty}/5)",
-            f"- **Effort:** {'★' * e.effort}{'☆' * (5 - e.effort)} ({e.effort}/5)",
-        ]
-        if e.difficulty_rationale:
-            lines.append(f"- _{e.difficulty_rationale}_")
         lines.append("")
 
     # Vault Connections
@@ -212,69 +165,6 @@ def _render_block(block) -> list[str]:
     return lines
 
 
-def _legacy_render(entry: KnowledgeEntry) -> list[str]:
-    """
-    Fallback renderer for entries that predate note_blocks.
-    Reproduces the original hardcoded layout so old entries still export cleanly.
-    """
-    lines = []
-
-    if entry.type_specific_fields:
-        template = get_template(entry.content_type)
-        lines.append(f"## {template['display_name']}")
-        for f in entry.type_specific_fields:
-            lines += [f"**{f.label}**", f.value, ""]
-        lines.append("")
-
-    lines += ["## Key Points", entry.key_points, ""]
-
-    if entry.action_items:
-        lines.append("## Action Items")
-        for item in entry.action_items:
-            cb = "x" if item.done else " "
-            lines.append(f"- [{cb}] {item.text}")
-        lines.append("")
-
-    if entry.implementation_plan:
-        lines.append("## Implementation Plan")
-        for step in entry.implementation_plan:
-            time = f" _{step.time_estimate}_" if step.time_estimate else ""
-            lines += [f"### Step {step.step_number}: {step.title}{time}", step.description, ""]
-        lines.append("")
-
-    if entry.claims:
-        lines.append("## Claims Made")
-        for c in entry.claims:
-            note = f" — {c.note}" if c.note else ""
-            lines.append(f"- **[{c.verifiability}]** {c.claim}{note}")
-        lines.append("")
-
-    if entry.tools_resources:
-        lines.append("## Tools & Resources")
-        for t in entry.tools_resources:
-            desc = f": {t.description}" if t.description else ""
-            url = f" ({t.url})" if t.url else ""
-            lines.append(f"- **{t.name}** [{t.type}]{desc}{url}")
-        lines.append("")
-
-    if entry.referenced_artifacts:
-        lines.append("## Referenced Artifacts")
-        for a in entry.referenced_artifacts:
-            desc = f": {a.description}" if a.description else ""
-            url = f" → {a.url}" if a.url else ""
-            lines.append(f"- **{a.name}** ({a.type}){desc}{url}")
-            if a.snippet:
-                lines += ["```", a.snippet, "```"]
-        lines.append("")
-
-    lines += ["## Topic Map", f"- **{entry.topic_map.main_topic}**"]
-    for sub in entry.topic_map.subtopics:
-        lines.append(f"  - {sub}")
-    lines.append("")
-
-    lines += ["## Next Step", entry.next_step, ""]
-
-    return lines
 
 
 def export_entry(entry: KnowledgeEntry, output_dir: str) -> str:

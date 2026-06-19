@@ -1,11 +1,11 @@
 """
-Insightr FastAPI backend — all 12 insight features exposed as clean REST endpoints.
+Insightr FastAPI backend — insight features exposed as clean REST endpoints.
 
 Endpoint map (for frontend agents):
   POST /api/process                    → start processing a URL (async)
   GET  /api/status/{task_id}           → poll processing status
   GET  /api/feed                       → list of summary cards (newest first)
-  GET  /api/entries/{id}               → full insight card (all 12 features)
+  GET  /api/entries/{id}               → full insight card
   GET  /api/entries/{id}/deep-research-prompt → on-demand deep research prompt
   POST /api/todo/{id}/check            → mark action item done/undone
   GET  /api/todo                       → all action items (filterable)
@@ -41,7 +41,7 @@ from markdown_export import entry_to_markdown
 
 app = FastAPI(
     title="Insightr API",
-    description="Transform short-form content into structured knowledge — 12 insight features.",
+    description="Transform short-form content into structured knowledge.",
     version="2.0.0",
 )
 
@@ -53,7 +53,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-templates = Jinja2Templates(directory="templates")
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 
 def get_ip():
@@ -143,8 +146,54 @@ def _process_task(task_id: str, url: str):
 # ── Processing ──────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
-    return templates.TemplateResponse(request, "index.html")
+async def read_root():
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Insightr API</title>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                background-color: #121212;
+                color: #E0E0E0;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                text-align: center;
+            }
+            h1 {
+                color: #C9A84C; /* Gold */
+                margin-bottom: 10px;
+            }
+            p {
+                font-size: 1.1em;
+                color: #A0A0A0;
+            }
+            .status {
+                background-color: #1E1E1E;
+                padding: 15px 30px;
+                border-radius: 8px;
+                border: 1px solid #333;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="status">
+            <h1>Insightr API</h1>
+            <p>The backend server is running successfully.</p>
+            <p style="font-size: 0.9em; color: #888;">Use the mobile app to interact with the API.</p>
+        </div>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content, status_code=200)
 
 
 @app.post("/api/process", summary="Start processing a URL")
@@ -179,8 +228,7 @@ async def get_status(task_id: str):
 async def get_feed(limit: int = 50):
     """
     Returns compact summary cards for the feed/list view, newest first.
-    Each card includes action_item_count, implementation_step_count,
-    tool_count, and effort_estimation for the feed UI chips.
+    Each card includes action_item_count for the feed UI chips.
     """
     config = load_config()
     db.init_db(config["db_path"])
@@ -196,10 +244,9 @@ async def get_feed(limit: int = 50):
 @app.get("/api/entries/{entry_id}", summary="Get full insight card")
 async def get_entry(entry_id: int):
     """
-    Returns the complete insight card for one entry — all 12 features:
-      core_takeaway, action_items, implementation_plan, claims,
-      tools_resources, rabbit_hole, knowledge_cards, referenced_artifacts,
-      topic_map, effort_estimation, missing_context, connections.
+    Returns the complete insight card for one entry:
+      note_blocks, action_items, knowledge_cards, referenced_artifacts,
+      connections.
     Note: deep_research_prompt is excluded here; use the dedicated endpoint.
     """
     config = load_config()
