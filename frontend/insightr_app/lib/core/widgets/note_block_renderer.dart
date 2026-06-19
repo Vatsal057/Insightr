@@ -84,6 +84,15 @@ Widget _sectionTitle(String? title) {
 }
 
 List<String> _lines(String content, {String? blockType}) {
+  if (blockType == 'code_snippet' ||
+      blockType == 'quote' ||
+      blockType == 'text' ||
+      blockType == 'key_insight' ||
+      blockType == 'warning' ||
+      blockType == 'tip') {
+    return content.split('\n');
+  }
+
   final rawLines = content.split('\n').where((l) => l.trim().isNotEmpty).toList();
   final finalLines = <String>[];
 
