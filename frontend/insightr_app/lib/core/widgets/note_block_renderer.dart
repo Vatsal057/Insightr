@@ -83,8 +83,18 @@ Widget _sectionTitle(String? title) {
   );
 }
 
-List<String> _lines(String content) =>
-    content.split('\n').where((l) => l.trim().isNotEmpty).toList();
+List<String> _lines(String content, {String? blockType}) {
+  // Graceful fallback for legacy LLM outputs that combined items onto one line separated by '|'
+  if (!content.contains('\n') && content.contains('|')) {
+    final parts = content.split('|');
+    // For stat_row, a single 'value|label' on one line is valid and should not be split into separate items here.
+    // If it's a stat_row, we only split if there are multiple stats (e.g. 'val|lbl|val|lbl' -> implies error).
+    if (blockType != 'stat_row' || parts.length > 2) {
+      return parts.where((l) => l.trim().isNotEmpty).toList();
+    }
+  }
+  return content.split('\n').where((l) => l.trim().isNotEmpty).toList();
+}
 
 // ─── Block Renderers ─────────────────────────────────────────────────────────
 
@@ -124,7 +134,7 @@ class _ChecklistBlockState extends State<_ChecklistBlock> {
   @override
   void initState() {
     super.initState();
-    _items = _lines(widget.block.content);
+    _items = _lines(widget.block.content, blockType: widget.block.blockType);
     _checked = List.filled(_items.length, false);
   }
 
@@ -191,7 +201,7 @@ class _StepsBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = _lines(block.content);
+    final items = _lines(block.content, blockType: block.blockType);
     final stepStyle = GoogleFonts.inter(
       fontSize: 13, height: 1.5, color: InsightrColors.textSecondary,
     );
@@ -230,7 +240,7 @@ class _BulletsBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = _lines(block.content);
+    final items = _lines(block.content, blockType: block.blockType);
     final itemStyle = GoogleFonts.inter(
       fontSize: 13, height: 1.5, color: InsightrColors.textSecondary,
     );
@@ -266,7 +276,7 @@ class _StatRowBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = _lines(block.content);
+    final items = _lines(block.content, blockType: block.blockType);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       if ((block.title ?? '').isNotEmpty) _sectionTitle(block.title),
       if (items.length <= 2)
@@ -332,7 +342,7 @@ class _ComparisonBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lines = _lines(block.content);
+    final lines = _lines(block.content, blockType: block.blockType);
     if (lines.isEmpty) return const SizedBox.shrink();
     final headers = lines.first.split('|');
     final rows = lines.skip(1).toList();
@@ -371,7 +381,7 @@ class _LabelValuesBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = _lines(block.content);
+    final items = _lines(block.content, blockType: block.blockType);
     final valStyle = GoogleFonts.inter(
       fontSize: 13, height: 1.4, color: InsightrColors.textPrimary,
     );
@@ -411,7 +421,7 @@ class _TimelineBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = _lines(block.content);
+    final items = _lines(block.content, blockType: block.blockType);
     final descStyle = GoogleFonts.inter(
       fontSize: 12, height: 1.4, color: InsightrColors.textSecondary,
     );
