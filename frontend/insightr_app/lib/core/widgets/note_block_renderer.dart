@@ -38,8 +38,8 @@ class NoteBlockRenderer extends StatelessWidget {
 
 TextSpan _parseBold(String text, TextStyle base) {
   final boldStyle = base.copyWith(
-    fontWeight: FontWeight.w700,
-    color: InsightrColors.textPrimary,
+    fontWeight: FontWeight.w800,
+    color: base.color == InsightrColors.textSecondary ? InsightrColors.textPrimary : base.color,
   );
 
   final spans = <InlineSpan>[];
@@ -71,11 +71,13 @@ Widget _sectionTitle(String? title) {
   if (title == null || title.isEmpty) return const SizedBox.shrink();
   return Padding(
     padding: const EdgeInsets.only(bottom: 10),
-    child: Text(
-      title.toUpperCase(),
-      style: GoogleFonts.inter(
-        fontSize: 10, fontWeight: FontWeight.w700,
-        letterSpacing: 1.5, color: InsightrColors.goldMuted,
+    child: _richText(
+      title,
+      GoogleFonts.inter(
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.0,
+        color: InsightrColors.goldPrimary,
       ),
     ),
   );

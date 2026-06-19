@@ -35,8 +35,8 @@ OUTPUT: A single JSON object. No prose, no markdown fences. Match the schema exa
 GOLDEN RULE FOR CONTENT EXTRACTION:
 - NEVER write high-level summaries *about* the video (e.g., do NOT write "This video explains an 8-week roadmap...").
 - Instead, extract the EXACT content, roadmaps, systems, or instructions in full detail.
-- If the video contains an "8-week roadmap" or "12-day setup", you MUST write out the details for all the weeks or days, specifying the exact goals, tasks, outputs, and reflections for each.
-- Extract all copy-pasteable assets, scripts, templates (e.g., outreach templates, Notion database structures, prompt scripts) verbatim into `code_snippet` blocks.
+- If the video only shows a partial layout of a larger system (e.g. only Week 1 of an 8-week roadmap, or Day 1 of a 12-day setup), you MUST use your own deep domain expertise to logically fill in, extrapolate, and complete the remaining weeks/days so that the user receives a fully built out, valuable end-to-end plan.
+- Only actual templates, scripts, code, or Notion database schemas should go into `code_snippet` blocks (which will make them copy-pasteable in the app UI). Standard educational explanation and notes should stay in plain text, bullet, or checklist blocks.
 - Talk directly to the user. Use active voice and second-person pronoun ("you", "your target", "your checklist").
 
 VISUAL DECORATION & SCANNABILITY:
