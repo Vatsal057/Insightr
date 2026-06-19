@@ -184,8 +184,8 @@ def extract_knowledge(
     for attempt in range(max_retries + 1):
         try:
             response = client.models.generate_content(
-                # gemini-2.5-flash: higher free-tier RPM + TPD quota than 2.0-flash
-                model="gemini-2.5-flash",
+                # gemini-3.1-flash-lite: optimized lite model for high frequency and lower latency
+                model="gemini-3.1-flash-lite",
                 contents=parts,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
