@@ -123,44 +123,8 @@ class _DeepInsightScreenState extends State<DeepInsightScreen> {
             _SectionTitle('REFERENCED ARTIFACTS'),
             const SizedBox(height: 10),
             ...deep.referencedArtifacts.map((r) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: GlassCard(padding: const EdgeInsets.all(14), child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ConceptTagChip(conceptType: r.type),
-                  const SizedBox(width: 10),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(r.name, style: GoogleFonts.inter(
-                      fontSize: 13, fontWeight: FontWeight.w700, color: InsightrColors.textPrimary,
-                    )),
-                    const SizedBox(height: 2),
-                    if (r.description.isNotEmpty)
-                      Text(r.description, style: GoogleFonts.inter(
-                        fontSize: 12, color: InsightrColors.textSecondary, height: 1.4,
-                      )),
-                    if (r.url != null && r.url!.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(r.url!, style: GoogleFonts.inter(
-                        fontSize: 11, color: InsightrColors.goldMuted,
-                      ), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ],
-                    if (r.snippet != null && r.snippet!.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0x08FFFFFF),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text('"${r.snippet!}"', style: GoogleFonts.inter(
-                          fontSize: 11, color: InsightrColors.textMuted,
-                          fontStyle: FontStyle.italic, height: 1.4,
-                        )),
-                      ),
-                    ],
-                  ])),
-                ],
-              )),
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildArtifactCatalog(r),
             )),
             const SizedBox(height: 8),
           ],
@@ -233,4 +197,129 @@ class _MiniStat extends StatelessWidget {
       ]),
     );
   }
+}
+
+// ── Artifact Helpers ─────────────────────────────────────────────────────────
+
+IconData _getArtifactIcon(String type) {
+  switch (type.toLowerCase()) {
+    case 'book':
+    case 'guide':
+    case 'tutorial':
+      return Icons.book_rounded;
+    case 'research_paper':
+    case 'document':
+      return Icons.description_rounded;
+    case 'course':
+    case 'lecture':
+      return Icons.school_rounded;
+    case 'movie':
+    case 'tv_show':
+    case 'video':
+      return Icons.movie_rounded;
+    case 'podcast':
+    case 'interview':
+      return Icons.mic_rounded;
+    case 'song':
+    case 'album':
+      return Icons.music_note_rounded;
+    case 'presentation':
+      return Icons.co_present_rounded;
+    case 'framework':
+    case 'template':
+      return Icons.grid_view_rounded;
+    case 'dataset':
+      return Icons.storage_rounded;
+    case 'tool':
+      return Icons.build_rounded;
+    case 'link':
+      return Icons.link_rounded;
+    default:
+      return Icons.bookmark_outline_rounded;
+  }
+}
+
+String _capitalize(String s) {
+  if (s.isEmpty) return '';
+  return s.split('_').map((word) => word.isEmpty ? '' : '${word[0].toUpperCase()}${word.substring(1)}').join(' ');
+}
+
+Widget _buildArtifactCatalog(ReferencedArtifact r) {
+  final valStyle = GoogleFonts.inter(
+    fontSize: 12, height: 1.4, color: InsightrColors.textPrimary,
+  );
+
+  final properties = <MapEntry<String, Widget>>[
+    MapEntry(
+      'Type',
+      Text(_capitalize(r.type), style: GoogleFonts.inter(
+        fontSize: 12, fontWeight: FontWeight.w600, color: InsightrColors.goldPrimary,
+      )),
+    ),
+    if (r.description.isNotEmpty)
+      MapEntry('Overview', Text(r.description, style: valStyle)),
+    if (r.url != null && r.url!.isNotEmpty)
+      MapEntry(
+        'Source',
+        Text(r.url!, style: GoogleFonts.inter(
+          fontSize: 11, color: InsightrColors.goldLight, decoration: TextDecoration.underline,
+        ), maxLines: 1, overflow: TextOverflow.ellipsis),
+      ),
+    if (r.snippet != null && r.snippet!.isNotEmpty)
+      MapEntry(
+        'Quote',
+        Text('"${r.snippet!}"', style: GoogleFonts.inter(
+          fontSize: 12, color: InsightrColors.textSecondary, fontStyle: FontStyle.italic,
+        )),
+      ),
+  ];
+
+  return GoldGlassCard(
+    leftBorderOnly: false,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(_getArtifactIcon(r.type), color: InsightrColors.goldPrimary, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(r.name, style: GoogleFonts.inter(
+                fontSize: 13, fontWeight: FontWeight.w800, color: InsightrColors.textPrimary,
+              )),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        const Divider(color: InsightrColors.borderGold, height: 1, thickness: 0.5),
+        ...properties.asMap().entries.map((e) {
+          final prop = e.value;
+          final isLast = e.key == properties.length - 1;
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 80,
+                      child: Text(prop.key, style: GoogleFonts.inter(
+                        fontSize: 11, fontWeight: FontWeight.w600,
+                        color: InsightrColors.textSecondary,
+                      )),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(child: prop.value),
+                  ],
+                ),
+              ),
+              if (!isLast)
+                const Divider(color: InsightrColors.borderGold, height: 1, thickness: 0.5),
+            ],
+          );
+        }),
+      ],
+    ),
+  );
 }

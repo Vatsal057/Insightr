@@ -72,10 +72,14 @@ class Concept(BaseModel):
 class ReferencedArtifact(BaseModel):
     """
     Feature #8 — Named artifacts referenced in the content.
-    Expanded type list to include courses, movies, podcasts, research papers.
+    Expanded type list to support books, papers, courses, media, templates, datasets.
     """
     name: str
-    type: Literal["book", "research_paper", "course", "movie", "podcast", "tool", "link", "template", "other"] = "other"
+    type: Literal[
+        "book", "research_paper", "course", "song", "album", "movie", "tv_show",
+        "podcast", "video", "document", "presentation", "lecture", "interview",
+        "tutorial", "guide", "framework", "template", "dataset", "tool", "link", "other"
+    ] = "other"
     description: Optional[str] = None
     url: Optional[str] = None
     snippet: Optional[str] = None

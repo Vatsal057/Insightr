@@ -120,8 +120,11 @@ TITLE RULES:
   - Good: "📅 Day 1 — Win Condition", "📞 Outreach CRM Template"
   - Bad: "Key Points", "Overview", "Info"
 
-SEQUENCING: Start with what matters most (usually a `key_insight` with a custom title). Then structure
-the rest organically based on what the content actually dictates.
+SEQUENCING:
+- Start with what matters most (usually a `key_insight` with a custom title).
+- ARTIFACT REVIEW RULE: If the video discusses, reviews, or is based on an artifact (e.g., a book, course, research paper, podcast, movie, TV show, guide, template, dataset, etc.), you MUST place a `label_values` block as the very first block in `note_blocks` (titled "📖 Book: [Name]" or similar). This catalog block must detail the key metadata (Author/Creator, Release Year, Genre, Rating, Scale).
+- CATALOG IS NOT THE END: Prepending the metadata catalog block is only the starting point. The subsequent blocks (bullets, key_insight, timeline, steps, etc.) MUST explain the actual content, core thesis, and detailed takeaways of the artifact exactly as described in the video.
+- Structure the rest organically based on what the content actually dictates.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 VIDEO METADATA:
