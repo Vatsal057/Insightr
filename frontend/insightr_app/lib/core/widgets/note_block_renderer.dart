@@ -319,7 +319,8 @@ class _StatBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
+    return GoldGlassCard(
+      leftBorderOnly: false,
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       child: Column(children: [
         Text(value, style: GoogleFonts.inter(
@@ -349,23 +350,30 @@ class _ComparisonBlock extends StatelessWidget {
     final cellStyle = GoogleFonts.inter(
       fontSize: 12, height: 1.4, color: InsightrColors.textSecondary,
     );
-    return GlassCard(
-      padding: const EdgeInsets.all(16),
+    return GoldGlassCard(
+      leftBorderOnly: false,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _sectionTitle((block.title ?? '').isNotEmpty ? block.title : null),
+        _sectionTitle((block.title ?? '').isNotEmpty ? block.title : 'COMPARISON'),
         Row(children: headers.map((h) => Expanded(child: Text(h.trim(),
           style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700,
             color: InsightrColors.goldPrimary)))).toList()),
         const SizedBox(height: 8),
-        const Divider(color: Color(0x14FFFFFF), height: 1),
+        const Divider(color: InsightrColors.borderGold, height: 1, thickness: 0.5),
         const SizedBox(height: 8),
-        ...rows.map((row) {
-          final cells = row.split('|');
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              ...cells.map((c) => Expanded(child: _richText(c.trim(), cellStyle))),
-            ]),
+        ...rows.asMap().entries.map((e) {
+          final cells = e.value.split('|');
+          final isLast = e.key == rows.length - 1;
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  ...cells.map((c) => Expanded(child: _richText(c.trim(), cellStyle))),
+                ]),
+              ),
+              if (!isLast)
+                const Divider(color: InsightrColors.borderGold, height: 1, thickness: 0.5),
+            ],
           );
         }),
       ]),
@@ -462,7 +470,7 @@ class _TimelineBlock extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(lbl, style: GoogleFonts.inter(
                     fontSize: 13, fontWeight: FontWeight.w700,
-                    color: InsightrColors.textPrimary,
+                    color: InsightrColors.goldPrimary,
                   )),
                   if (desc.isNotEmpty) ...[
                     const SizedBox(height: 2),
@@ -523,7 +531,8 @@ class _CodeBlockState extends State<_CodeBlock> {
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
+    return GoldGlassCard(
+      leftBorderOnly: true,
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
