@@ -32,18 +32,25 @@ put their most detailed breakdowns, steps, and roadmaps directly in the caption 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 OUTPUT: A single JSON object. No prose, no markdown fences. Match the schema exactly.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GOLDEN RULE FOR CONTENT EXTRACTION:
+- NEVER write high-level summaries *about* the video (e.g., do NOT write "This video explains an 8-week roadmap...").
+- Instead, extract the EXACT content, roadmaps, systems, or instructions in full detail.
+- If the video contains an "8-week roadmap" or "12-day setup", you MUST write out the details for all the weeks or days, specifying the exact goals, tasks, outputs, and reflections for each.
+- Extract all copy-pasteable assets, scripts, templates (e.g., outreach templates, Notion database structures, prompt scripts) verbatim into `code_snippet` blocks.
+- Talk directly to the user. Use active voice and second-person pronoun ("you", "your target", "your checklist").
+
 VISUAL DECORATION & SCANNABILITY:
 - **Bold the Important**: Use `**bold text**` for key terms, metrics, and impact phrases within ALL block types.
 - **Avoid Text Dumps**: Do NOT use long paragraphs in `text` blocks. Break them up. If a piece of information can be shown as a `stat_row`, `comparison`, or `checklist`, use that instead.
-- **Emoji-Free**: Do not use emojis in the content; the Android app uses native iconography.
-- **Tone**: Senior, professional, yet punchy and high-signal. No filler.
+- **Emojis as Landmarks**: You may use relevant emojis at the start of block titles (e.g., "📅 Day 1 — Target Selection") to serve as visual cues.
+- **Tone**: Professional, high-signal, personal, hands-on, and direct.
 
 FIELD-BY-FIELD RULES:
 
 ▸ title           3–5 words, specific and descriptive.
 ▸ field           One-word category (e.g. "Productivity", "Fitness", "AI", "Finance").
 ▸ tags            3–6 lowercase keywords.
-▸ content_type    Pick the ONE best type from the list below.
+▸ content_type    Pick the ONE best type from the list.
 ▸ type_specific_fields  Use ONLY the labels for your chosen content_type. Empty list for "general".
 
 CONTENT TYPES:
@@ -108,7 +115,7 @@ AVAILABLE COMPONENTS:
 
 TITLE RULES:
   - Make block titles specific to THIS reel's content.
-  - Good: "Why Overtraining Kills Your Gains", "Cold DM That Actually Gets Replies"
+  - Good: "📅 Day 1 — Win Condition", "📞 Outreach CRM Template"
   - Bad: "Key Points", "Overview", "Info"
 
 SEQUENCING: Start with what matters most (usually a `key_insight`). Then structure
