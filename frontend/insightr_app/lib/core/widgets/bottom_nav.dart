@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme.dart';
@@ -22,36 +23,39 @@ class InsightrBottomNav extends StatelessWidget {
       padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12, top: 8),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(32),
-        child: Container(
-          decoration: BoxDecoration(
-            color: InsightrColors.navBg,
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(
-              color: const Color(0x1AFFFFFF), // rgba(255,255,255,0.10)
-              width: 1,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Container(
+            decoration: BoxDecoration(
+              color: InsightrColors.navBg,
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(
+                color: const Color(0x1AFFFFFF), // rgba(255,255,255,0.10)
+                width: 1,
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x80000000),
+                  blurRadius: 32,
+                  offset: Offset(0, 8),
+                ),
+                BoxShadow(
+                  color: Color(0x0FC9A84C), // rgba(201,168,76,0.06)
+                  blurRadius: 0,
+                  spreadRadius: 1,
+                ),
+              ],
             ),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x80000000),
-                blurRadius: 32,
-                offset: Offset(0, 8),
-              ),
-              BoxShadow(
-                color: Color(0x0FC9A84C), // rgba(201,168,76,0.06)
-                blurRadius: 0,
-                spreadRadius: 1,
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          child: Row(
-            children: [
-              _NavItem(icon: Icons.home_rounded, label: 'Home', index: 0, currentIndex: currentIndex, onTap: onTap),
-              _NavItem(icon: Icons.inventory_2_rounded, label: 'Vault', index: 1, currentIndex: currentIndex, onTap: onTap),
-              _NavItemWithBadge(icon: Icons.check_circle_outline_rounded, label: 'Actions', index: 2, currentIndex: currentIndex, onTap: onTap, badgeCount: pendingCount),
-              _NavItem(icon: Icons.search_rounded, label: 'Search', index: 3, currentIndex: currentIndex, onTap: onTap),
-              _NavItem(icon: Icons.person_outline_rounded, label: 'Profile', index: 4, currentIndex: currentIndex, onTap: onTap),
-            ],
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+            child: Row(
+              children: [
+                _NavItem(icon: Icons.home_rounded, label: 'Home', index: 0, currentIndex: currentIndex, onTap: onTap),
+                _NavItem(icon: Icons.inventory_2_rounded, label: 'Vault', index: 1, currentIndex: currentIndex, onTap: onTap),
+                _NavItemWithBadge(icon: Icons.check_circle_outline_rounded, label: 'Actions', index: 2, currentIndex: currentIndex, onTap: onTap, badgeCount: pendingCount),
+                _NavItem(icon: Icons.search_rounded, label: 'Search', index: 3, currentIndex: currentIndex, onTap: onTap),
+                _NavItem(icon: Icons.person_outline_rounded, label: 'Profile', index: 4, currentIndex: currentIndex, onTap: onTap),
+              ],
+            ),
           ),
         ),
       ),

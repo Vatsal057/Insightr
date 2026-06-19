@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme.dart';
 
@@ -32,14 +33,17 @@ class GlassCard extends StatelessWidget {
 
     Widget card = ClipRRect(
       borderRadius: br,
-      child: Container(
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: br,
-          border: Border.all(color: bc, width: 1),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: blurStrength, sigmaY: blurStrength),
+        child: Container(
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: br,
+            border: Border.all(color: bc, width: 1),
+          ),
+          padding: padding ?? const EdgeInsets.all(18),
+          child: child,
         ),
-        padding: padding ?? const EdgeInsets.all(18),
-        child: child,
       ),
     );
 
@@ -56,12 +60,14 @@ class GoldGlassCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
   final bool leftBorderOnly;
+  final double blurStrength;
 
   const GoldGlassCard({
     super.key,
     required this.child,
     this.padding,
     this.leftBorderOnly = false,
+    this.blurStrength = 12,
   });
 
   @override
@@ -75,18 +81,21 @@ class GoldGlassCard extends StatelessWidget {
 
     return ClipRRect(
       borderRadius: radius,
-      child: Container(
-        decoration: BoxDecoration(
-          color: InsightrColors.glassGold,
-          borderRadius: radius,
-          border: leftBorderOnly
-              ? const Border(
-                  left: BorderSide(color: InsightrColors.goldPrimary, width: 3),
-                )
-              : Border.all(color: InsightrColors.borderGold, width: 1),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: blurStrength, sigmaY: blurStrength),
+        child: Container(
+          decoration: BoxDecoration(
+            color: InsightrColors.glassGold,
+            borderRadius: radius,
+            border: leftBorderOnly
+                ? const Border(
+                    left: BorderSide(color: InsightrColors.goldPrimary, width: 3),
+                  )
+                : Border.all(color: InsightrColors.borderGold, width: 1),
+          ),
+          padding: padding ?? const EdgeInsets.all(16),
+          child: child,
         ),
-        padding: padding ?? const EdgeInsets.all(16),
-        child: child,
       ),
     );
   }
