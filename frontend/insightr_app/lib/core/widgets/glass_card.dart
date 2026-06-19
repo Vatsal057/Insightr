@@ -31,15 +31,28 @@ class GlassCard extends StatelessWidget {
     final bg = backgroundColor ?? InsightrColors.glassBg;
     final bc = borderColor ?? InsightrColors.glassBorder;
 
+    final bgAlpha = (bg.toARGB32() >> 24) & 0xFF;
+    final bcAlpha = (bc.toARGB32() >> 24) & 0xFF;
+
     Widget card = ClipRRect(
       borderRadius: br,
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: blurStrength, sigmaY: blurStrength),
         child: Container(
           decoration: BoxDecoration(
-            color: bg,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                bg.withAlpha((bgAlpha * 1.6).clamp(0, 255).toInt()),
+                bg.withAlpha((bgAlpha * 0.4).clamp(0, 255).toInt()),
+              ],
+            ),
             borderRadius: br,
-            border: Border.all(color: bc, width: 1),
+            border: Border.all(
+              color: bc.withAlpha((bcAlpha * 1.3).clamp(0, 255).toInt()),
+              width: 0.8,
+            ),
           ),
           padding: padding ?? const EdgeInsets.all(18),
           child: child,
@@ -85,13 +98,26 @@ class GoldGlassCard extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: blurStrength, sigmaY: blurStrength),
         child: Container(
           decoration: BoxDecoration(
-            color: InsightrColors.glassGold,
+            gradient: leftBorderOnly
+                ? null
+                : LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      InsightrColors.glassGold.withAlpha(48),
+                      InsightrColors.glassGold.withAlpha(12),
+                    ],
+                  ),
+            color: leftBorderOnly ? InsightrColors.glassGold : null,
             borderRadius: radius,
             border: leftBorderOnly
                 ? const Border(
                     left: BorderSide(color: InsightrColors.goldPrimary, width: 3),
                   )
-                : Border.all(color: InsightrColors.borderGold, width: 1),
+                : Border.all(
+                    color: InsightrColors.borderGold.withAlpha(80),
+                    width: 0.8,
+                  ),
           ),
           padding: padding ?? const EdgeInsets.all(16),
           child: child,

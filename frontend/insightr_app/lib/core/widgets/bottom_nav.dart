@@ -27,11 +27,18 @@ class InsightrBottomNav extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Container(
             decoration: BoxDecoration(
-              color: InsightrColors.navBg.withAlpha(153),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  InsightrColors.navBg.withAlpha(180),
+                  InsightrColors.navBg.withAlpha(100),
+                ],
+              ),
               borderRadius: BorderRadius.circular(32),
               border: Border.all(
-                color: const Color(0x1AFFFFFF), // rgba(255,255,255,0.10)
-                width: 1,
+                color: const Color(0x2BFFFFFF), // slightly brighter highlight for edge refraction
+                width: 0.8,
               ),
               boxShadow: const [
                 BoxShadow(
