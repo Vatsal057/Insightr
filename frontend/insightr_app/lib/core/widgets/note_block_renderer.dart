@@ -88,20 +88,32 @@ List<String> _lines(String content, {String? blockType}) {
   final finalLines = <String>[];
 
   for (final line in rawLines) {
+    List<String> currentLines = [line];
+
+    // 1. Split by pipes if present
     if (line.contains('|')) {
-      // For stat_row, a single 'value|label' on one line is valid.
       if (blockType == 'stat_row') {
         final parts = line.split('|');
-        if (parts.length <= 2) {
-          finalLines.add(line);
-          continue;
+        if (parts.length > 2) {
+          currentLines = parts.map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
         }
+      } else {
+        currentLines = line.split('|').map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
       }
-      final parts = line.split('|').map((p) => p.trim()).where((p) => p.isNotEmpty);
-      finalLines.addAll(parts);
-    } else {
-      finalLines.add(line);
     }
+
+    // 2. Split by bullet points '•' (handles inline bullet list collapses)
+    final bulletSplitLines = <String>[];
+    for (final cl in currentLines) {
+      if (cl.contains('•')) {
+        final parts = cl.split('•').map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
+        bulletSplitLines.addAll(parts);
+      } else {
+        bulletSplitLines.add(cl);
+      }
+    }
+
+    finalLines.addAll(bulletSplitLines);
   }
   return finalLines;
 }
