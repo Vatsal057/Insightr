@@ -38,11 +38,15 @@ Whenever any changes are made to the `backend/` directory in this project root:
 ## 🛠️ Downloader & Resolver Pipeline
 To bypass standard datacenter IP bans on Instagram/Meta, we integrated a multi-tiered resolver architecture in [downloader.py](file:///Users/vatsal/Downloads/INSIGHTERPROJECT/Insightr/backend/downloader.py):
 
-1. **`anyvidsave.in` (Primary):** Keyless, free, very fast. Replicates the browser download requests programmatically.
-2. **`igreelsdl.com` (Fallback 1):** Keyless, free. Resolves formats and streams the direct download via its own server proxy endpoint.
-3. **`RapidAPI` (Fallback 2):** Uses the `RAPIDAPI_KEY` (SiputzX Downloader) if configured in environment secrets. Highly reliable backup.
-4. **Local `yt-dlp` (Fallback 3):** Standard python downloader stream (requires cookies on datacenter IPs).
-5. **Local `instaloader` (Fallback 4):** Fallback for Instagram image carousels.
+1. **`vidssave.com` (Primary):** Keyless, free, very fast. Replicates browser parse POST requests.
+2. **`savethevideo.com` (Secondary):** Keyless, free. Supports task queue creation (202 Accepted) or immediate cache retrieval (200 OK).
+3. **`saveig.in` (Tertiary):** Keyless, free. Resolves using a custom API and returns a web proxy download stream.
+4. **`downloadgram.org` (Quaternary):** Keyless, free. Requests custom media API and parses JWT CDN tokens to fetch streams.
+5. **`anyvidsave.in` (Fallback 1):** Keyless, free, very fast. Replicates the browser download requests programmatically.
+6. **`igreelsdl.com` (Fallback 2):** Keyless, free. Resolves formats and streams the direct download via its own server proxy endpoint.
+7. **`RapidAPI` (Fallback 3):** Uses the `RAPIDAPI_KEY` (SiputzX Downloader) if configured in environment secrets. Highly reliable backup.
+8. **Local `yt-dlp` (Fallback 4):** Standard python downloader stream (requires cookies on datacenter IPs).
+9. **Local `instaloader` (Fallback 5):** Fallback for Instagram image carousels.
 
 ---
 
@@ -50,11 +54,16 @@ To bypass standard datacenter IP bans on Instagram/Meta, we integrated a multi-t
 
 | Target Site | Status | Notes / Decisions |
 | :--- | :--- | :--- |
+| **vidssave.com** | **ACTIVE** | Works perfectly keyless via POST to parse endpoint using a static auth token. |
+| **savethevideo.com** | **ACTIVE** | Works perfectly keyless. Returns completed results immediately (200 OK) or supports polling (202 Accepted). |
+| **saveig.in** | **ACTIVE** | Works perfectly keyless. Requests WP JSON download API and pulls download stream from its php proxy. |
+| **downloadgram.org** | **ACTIVE** | Works perfectly keyless. Resolves direct CDN stream links by retrieving JWT tokens. |
 | **anyvidsave.in** | **ACTIVE** | Works perfectly without Cloudflare challenges or token encryption. |
 | **igreelsdl.com** | **ACTIVE** | Resolved successfully. Works cleanly with direct streaming endpoints. |
 | **indown.io** | **ABANDONED** | Protected by Cloudflare. Direct backend requests get blocked by the `cf_clearance` cookie challenge. |
 | **snapinsta.to** | **ABANDONED** | Returns obfuscated/packed JS (`eval(function(h,u,n...`) inside the AJAX response. Brittle and heavy to evaluate. |
 | **fastvideosave.net** | **ABANDONED** | Client-side JS encrypts the URL into a 96-char hex key sent in custom headers. Too fragile. |
+| **snapwc.com** | **ABANDONED** | Uses custom hybrid client-side encryption and returns a 422 Captcha Required block when accessed programmatically. |
 
 ---
 

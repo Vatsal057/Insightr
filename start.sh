@@ -1,20 +1,55 @@
 #!/bin/bash
+# Insightr — Development launcher script
+#
+# Usage:
+#   ./start.sh              — Run Phase 0 design-validation prototype (throwaway)
+#   ./start.sh prototype    — Same as above
+#   ./start.sh app          — Run the production Flutter app (coming soon)
+#   ./start.sh backend      — Start the FastAPI backend server
+#
+# Requirements:
+#   - Flutter installed and on PATH
+#   - Python 3.11+ for backend
 
-# Get the absolute path of the directory containing this script
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+set -e
 
-echo "==========================================="
-echo " Starting Insightr Backend & Frontend..."
-echo "==========================================="
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+FRONTEND_DIR="$SCRIPT_DIR/frontend/insightr_app"
+BACKEND_DIR="$SCRIPT_DIR/backend"
 
-# 1. Start the FastAPI backend in a new Terminal window
-echo "[1/2] Starting backend API server in a new window..."
-osascript -e "tell application \"Terminal\" to do script \"cd '$SCRIPT_DIR/backend' && .venv/bin/python api.py\""
+MODE="${1:-prototype}"
 
-# Wait a moment for backend to initialize
-sleep 2
+case "$MODE" in
+  prototype)
+    echo "▶ Launching Phase 0 design-validation prototype (throwaway)..."
+    echo "  This validates knowledge-network traversal before production code."
+    echo ""
+    cd "$FRONTEND_DIR"
+    flutter run -t lib/prototype/main_prototype.dart
+    ;;
 
-# 2. Start the Flutter web app on Chrome
-echo "[2/2] Launching Flutter app on Chrome..."
-cd "$SCRIPT_DIR/frontend/insightr_app"
-flutter run -d chrome
+  app)
+    echo "▶ Launching production Flutter app..."
+    echo "  (Not yet implemented — run 'flutter run' manually after Task 1+)"
+    cd "$FRONTEND_DIR"
+    flutter run
+    ;;
+
+  backend)
+    echo "▶ Starting FastAPI backend server..."
+    cd "$BACKEND_DIR"
+    if [ ! -d ".venv" ]; then
+      echo "  Creating virtual environment..."
+      python3 -m venv .venv
+    fi
+    source .venv/bin/activate
+    pip install -q -r requirements.txt
+    echo "  Server starting on http://localhost:8000"
+    python api.py
+    ;;
+
+  *)
+    echo "Usage: $0 [prototype|app|backend]"
+    exit 1
+    ;;
+esac
