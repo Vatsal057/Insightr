@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -42,7 +43,7 @@ class ApiService {
     try {
       udpSocket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 8888);
       udpSocket.broadcastEnabled = true;
-      print('Listening for UDP broadcasts on port 8888...');
+      debugPrint('Listening for UDP broadcasts on port 8888...');
 
       bool found = false;
 
@@ -57,7 +58,7 @@ class ApiService {
                 final ip = parts[1];
                 final port = parts[2];
                 _base = 'http://$ip:$port';
-                print('Found Insightr Backend via UDP at $_base');
+                debugPrint('Found Insightr Backend via UDP at $_base');
                 found = true;
                 return true;
               }
@@ -71,9 +72,9 @@ class ApiService {
       if (found) return;
     } catch (e) {
       if (e is TimeoutException) {
-        print('UDP discovery timed out, falling back to mDNS');
+        debugPrint('UDP discovery timed out, falling back to mDNS');
       } else {
-        print('UDP discovery failed: $e');
+        debugPrint('UDP discovery failed: $e');
       }
     } finally {
       // Always release the socket — without this, a timeout or any thrown
@@ -95,7 +96,7 @@ class ApiService {
           await for (final IPAddressResourceRecord ip in client.lookup<IPAddressResourceRecord>(
               ResourceRecordQuery.addressIPv4(srv.target))) {
             _base = 'http://${ip.address.address}:${srv.port}';
-            print('Found Insightr Backend via mDNS at $_base');
+            debugPrint('Found Insightr Backend via mDNS at $_base');
             client.stop();
             return;
           }
@@ -103,7 +104,7 @@ class ApiService {
       }
       client.stop();
     } catch (e) {
-      print('mDNS discovery failed: $e');
+      debugPrint('mDNS discovery failed: $e');
     }
   }
 
@@ -161,6 +162,22 @@ class ApiService {
   Future<Entry> getEntry(int id) async {
     final data = await _get('${AppConstants.entriesEndpoint}/$id');
     return Entry.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<bool> toggleFavorite(int entryId, bool isFavorite) async {
+    final data = await _post(
+      '${AppConstants.entriesEndpoint}/$entryId/favorite',
+      {'favorite': isFavorite.toString()},
+    );
+    return (data as Map<String, dynamic>)['is_favorite'] as bool? ?? false;
+  }
+
+  Future<bool> toggleImplementing(int entryId, bool isImplementing) async {
+    final data = await _post(
+      '${AppConstants.entriesEndpoint}/$entryId/implement',
+      {'implement': isImplementing.toString()},
+    );
+    return (data as Map<String, dynamic>)['is_implementing'] as bool? ?? false;
   }
 
   Future<String> getDeepResearchPrompt(int id) async {

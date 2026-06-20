@@ -254,7 +254,29 @@ async def get_entry(entry_id: int):
     entry = db.get_entry(config["db_path"], entry_id)
     if not entry:
         return JSONResponse({"error": "Entry not found"}, status_code=404)
-    return feed.entry_to_card(entry)
+    return feed.entry_to_card(entry, config["db_path"])
+
+
+@app.post("/api/entries/{entry_id}/favorite", summary="Toggle entry favorite status")
+async def toggle_favorite(entry_id: int, favorite: bool = Form(...)):
+    """Toggles the favorite flag on an entry."""
+    config = load_config()
+    db.init_db(config["db_path"])
+    success = db.set_entry_favorite(config["db_path"], entry_id, favorite)
+    if not success:
+        return JSONResponse({"error": "Entry not found or not modified"}, status_code=404)
+    return {"entry_id": entry_id, "is_favorite": favorite}
+
+
+@app.post("/api/entries/{entry_id}/implement", summary="Toggle entry implementing status")
+async def toggle_implement(entry_id: int, implement: bool = Form(...)):
+    """Toggles the implementing flag on an entry."""
+    config = load_config()
+    db.init_db(config["db_path"])
+    success = db.set_entry_implementing(config["db_path"], entry_id, implement)
+    if not success:
+        return JSONResponse({"error": "Entry not found or not modified"}, status_code=404)
+    return {"entry_id": entry_id, "is_implementing": implement}
 
 
 @app.get("/api/entries/{entry_id}/deep-research-prompt",
@@ -283,7 +305,12 @@ async def list_todo(done: bool = None):
     config = load_config()
     db.init_db(config["db_path"])
     rows = db.list_action_items(config["db_path"], done=done)
-    return [dict(row) for row in rows]
+    results = []
+    for row in rows:
+        d = dict(row)
+        d["done"] = bool(d["done"])
+        results.append(d)
+    return results
 
 
 @app.post("/api/todo/{item_id}/check", summary="Toggle action item completion")

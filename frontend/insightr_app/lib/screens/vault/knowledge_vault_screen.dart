@@ -251,8 +251,8 @@ class _ConceptsTab extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         scrollDirection: Axis.horizontal,
         itemCount: _types.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (_, i) {
+        separatorBuilder: (context, index) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
           final t = _types[i];
           return GestureDetector(
             onTap: () => onFilter(t),
@@ -284,7 +284,7 @@ class _ConceptsTab extends StatelessWidget {
           : ListView.builder(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 160),
               itemCount: concepts.length,
-              itemBuilder: (_, i) => Padding(
+              itemBuilder: (context, i) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: _ConceptCard(concept: concepts[i], onTap: () => onTap(concepts[i])),
               ),

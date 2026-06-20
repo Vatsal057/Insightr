@@ -22,10 +22,14 @@ class ActionItem {
   });
 
   factory ActionItem.fromJson(Map<String, dynamic> json) {
+    final rawDone = json['done'];
+    final parsedDone = rawDone is bool
+        ? rawDone
+        : (rawDone is int ? rawDone == 1 : false);
     return ActionItem(
       id: json['id'] as int,
       text: json['text'] as String? ?? '',
-      done: json['done'] as bool? ?? false,
+      done: parsedDone,
       priority: json['priority'] as String? ?? 'someday',
       timeEstimate: json['time_estimate'] as String?,
       entryId: json['entry_id'] as int? ?? 0,

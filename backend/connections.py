@@ -6,7 +6,6 @@ external services. Improves on plain tag overlap by combining several
 weighted signals into one score:
 
     - shared tags
-    - shared topic-map terms (main topic + subtopics)
     - shared referenced artifacts (tools/books/etc by name)
     - same field/category
     - shared keywords extracted from the takeaway + claims text
@@ -27,7 +26,6 @@ import db
 
 # Scoring weights for each signal. Tweak here if results feel off.
 WEIGHT_TAG = 3
-WEIGHT_TOPIC = 2
 WEIGHT_ARTIFACT = 2
 WEIGHT_FIELD = 1
 WEIGHT_CONTENT_TYPE = 1
@@ -50,7 +48,6 @@ def _entry_keywords(entry: KnowledgeEntry, top_n: int = KEYWORDS_PER_ENTRY) -> s
 def find_connections(db_path: str, entry: KnowledgeEntry, entry_id: int,
                       max_connections: int = 3, min_score: int = 2) -> List[Connection]:
     new_tags = _normalize(entry.tags)
-    new_topics = _normalize(c.name for c in entry.concepts)
     new_artifacts = _normalize(a.name for a in entry.referenced_artifacts)
     new_keywords = _entry_keywords(entry)
 
@@ -59,18 +56,15 @@ def find_connections(db_path: str, entry: KnowledgeEntry, entry_id: int,
     scored = []
     for c in candidates:
         c_tags = _normalize(c["tags"])
-        c_topics = _normalize(c.get("concepts", []))
         c_artifacts = _normalize(c.get("artifacts", []))
         c_keywords = set(c.get("keywords", []))
 
         shared_tags = new_tags & c_tags
-        shared_topics = new_topics & c_topics
         shared_artifacts = new_artifacts & c_artifacts
         shared_keywords = new_keywords & c_keywords
 
         score = (
             len(shared_tags) * WEIGHT_TAG
-            + len(shared_topics) * WEIGHT_TOPIC
             + len(shared_artifacts) * WEIGHT_ARTIFACT
             + len(shared_keywords) * WEIGHT_KEYWORD
         )
@@ -83,8 +77,6 @@ def find_connections(db_path: str, entry: KnowledgeEntry, entry_id: int,
             reasons = []
             if shared_tags:
                 reasons.append(f"tags: {', '.join(sorted(shared_tags))}")
-            if shared_topics:
-                reasons.append(f"topics: {', '.join(sorted(shared_topics))}")
             if shared_artifacts:
                 reasons.append(f"both mention: {', '.join(sorted(shared_artifacts))}")
             if shared_keywords:

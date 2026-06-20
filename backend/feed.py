@@ -8,25 +8,19 @@ additional transformation. Every field name here IS the frontend API contract.
 
 from __future__ import annotations
 
+import db
+import re
 from schema import KnowledgeEntry
 
 
-def entry_to_card(entry: KnowledgeEntry) -> dict:
+
+
+
+
+
+def entry_to_card(entry: KnowledgeEntry, db_path: str = None) -> dict:
     """
     Full insight card structured into three zones for ADHD-friendly rendering.
-
-    Zone 1 — "The Grab" (always visible, renders immediately):
-      hook, next_step, top action item.
-      The user should be able to act on zone 1 without reading anything else.
-
-    Zone 2 — "The Substance" (expanded on tap):
-      note_blocks (the actual content), full action checklist.
-
-    Zone 3 — "The Deep End" (collapsed by default, opt-in):
-      knowledge_cards, referenced_artifacts, connections.
-
-    The frontend should render zones in order and collapse zone 3 behind a
-    "Go deeper" toggle. Zone 1 is never hidden.
     """
     action_items_dumped = [a.model_dump() for a in entry.action_items]
 
@@ -45,6 +39,8 @@ def entry_to_card(entry: KnowledgeEntry) -> dict:
         "tags": entry.tags,
         "content_type": entry.content_type,
         "type_specific_fields": [f.model_dump() for f in entry.type_specific_fields],
+        "is_favorite": entry.is_favorite,
+        "is_implementing": entry.is_implementing,
         "created_at": entry.created_at,
 
         # ── Zone 1: The Grab ─────────────────────────────────────────────

@@ -120,6 +120,8 @@ class KnowledgeEntry(BaseModel):
         description="Ordered list of adaptive blocks that form the note body. The AI decides which blocks to include and how to title them based on this specific content."
     )
 
+    is_favorite: bool = False
+    is_implementing: bool = False
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     connections: List[Connection] = Field(default_factory=list)
 

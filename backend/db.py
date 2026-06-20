@@ -32,13 +32,14 @@ CREATE TABLE IF NOT EXISTS entries (
     tools_resources      TEXT NOT NULL DEFAULT '[]',
     rabbit_hole          TEXT NOT NULL DEFAULT '{}',
     referenced_artifacts TEXT NOT NULL DEFAULT '[]',
-    topic_map            TEXT NOT NULL,
     effort_estimation    TEXT,
     missing_context      TEXT NOT NULL DEFAULT '[]',
     explore_further      TEXT NOT NULL DEFAULT '[]',
     next_step            TEXT NOT NULL,
     keywords             TEXT NOT NULL DEFAULT '[]',
     note_blocks          TEXT NOT NULL DEFAULT '[]',
+    is_favorite          INTEGER NOT NULL DEFAULT 0,
+    is_implementing      INTEGER NOT NULL DEFAULT 0,
     created_at           TEXT NOT NULL
 );
 
@@ -122,6 +123,8 @@ MIGRATION_COLUMNS = [
     ("note_blocks",          "TEXT NOT NULL DEFAULT '[]'"),
     # v2 additions
     ("hook",                 "TEXT NOT NULL DEFAULT ''"),
+    ("is_favorite",          "INTEGER NOT NULL DEFAULT 0"),
+    ("is_implementing",      "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 # Migrations for child tables (action_items columns added post-launch)
@@ -214,10 +217,10 @@ def save_entry(db_path: str, entry: KnowledgeEntry) -> int:
                 title, source_url, field, content_type, type_specific_fields,
                 hook, summary, key_points,
                 implementation_plan, tools_resources, rabbit_hole,
-                referenced_artifacts, topic_map,
+                referenced_artifacts,
                 effort_estimation, missing_context,
-                explore_further, next_step, keywords, note_blocks, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                explore_further, next_step, keywords, note_blocks, is_favorite, is_implementing, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 entry.title,
@@ -232,13 +235,14 @@ def save_entry(db_path: str, entry: KnowledgeEntry) -> int:
                 '[]', # deprecated tools_resources
                 '{}', # deprecated rabbit_hole
                 json.dumps([a.model_dump() for a in entry.referenced_artifacts]),
-                '{}', # deprecated topic_map
                 None, # deprecated effort_estimation
                 '[]', # deprecated missing_context
                 '[]', # deprecated explore_further
                 entry.next_step,
                 json.dumps(entry_keywords),
                 json.dumps([b.model_dump() for b in entry.note_blocks]),
+                1 if entry.is_favorite else 0,
+                1 if entry.is_implementing else 0,
                 entry.created_at,
             ),
         )
@@ -370,6 +374,8 @@ def _row_to_entry(conn: sqlite3.Connection, row: sqlite3.Row) -> KnowledgeEntry:
     ]
 
     hook = row["hook"] if "hook" in row.keys() else ""
+    is_favorite = bool(row["is_favorite"]) if "is_favorite" in row.keys() else False
+    is_implementing = bool(row["is_implementing"]) if "is_implementing" in row.keys() else False
 
     return KnowledgeEntry(
         title=row["title"],
@@ -386,6 +392,8 @@ def _row_to_entry(conn: sqlite3.Connection, row: sqlite3.Row) -> KnowledgeEntry:
         ],
         next_step=row["next_step"],
         note_blocks=note_blocks,
+        is_favorite=is_favorite,
+        is_implementing=is_implementing,
         created_at=row["created_at"],
         connections=connections,
         concepts=concepts,
@@ -473,9 +481,10 @@ def list_action_items(db_path: str, done: Optional[bool] = None) -> List[sqlite3
             SELECT a.id, a.text, a.done, a.priority, a.time_estimate,
                    e.id as entry_id, e.title, e.field
             FROM action_items a JOIN entries e ON e.id = a.entry_id
+            WHERE e.is_implementing = 1
         """
         params: list = []
-        where = " WHERE a.done = ?" if done is not None else ""
+        where = " AND a.done = ?" if done is not None else ""
         if done is not None:
             params.append(int(done))
         order = """
@@ -729,5 +738,33 @@ def get_deep_research_prompt(db_path: str, entry_id: int) -> Optional[str]:
         title = row["title"]
         prompt = f"You are a research assistant. I just learned about '{title}'.\n\nPlease provide a comprehensive deep dive covering advanced concepts and adjacent topics related to this."
         return prompt
+    finally:
+        conn.close()
+
+
+def set_entry_favorite(db_path: str, entry_id: int, is_favorite: bool) -> bool:
+    """Toggles the favorite flag on an entry."""
+    conn = get_connection(db_path)
+    try:
+        cur = conn.execute(
+            "UPDATE entries SET is_favorite = ? WHERE id = ?",
+            (1 if is_favorite else 0, entry_id)
+        )
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def set_entry_implementing(db_path: str, entry_id: int, is_implementing: bool) -> bool:
+    """Toggles the implementing flag on an entry."""
+    conn = get_connection(db_path)
+    try:
+        cur = conn.execute(
+            "UPDATE entries SET is_implementing = ? WHERE id = ?",
+            (1 if is_implementing else 0, entry_id)
+        )
+        conn.commit()
+        return cur.rowcount > 0
     finally:
         conn.close()

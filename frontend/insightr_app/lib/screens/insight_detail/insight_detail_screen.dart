@@ -79,6 +79,58 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
           )),
           actions: [
             GestureDetector(
+              onTap: () async {
+                try {
+                  final newFav = !e.isFavorite;
+                  final success = await _api.toggleFavorite(e.id, newFav);
+                  if (!mounted) return;
+                  setState(() {
+                    _entry = Entry(
+                      id: e.id,
+                      title: e.title,
+                      sourceUrl: e.sourceUrl,
+                      field: e.field,
+                      tags: e.tags,
+                      contentType: e.contentType,
+                      isFavorite: success,
+                      isImplementing: e.isImplementing,
+                      createdAt: e.createdAt,
+                      zoneGrab: e.zoneGrab,
+                      zoneSubstance: e.zoneSubstance,
+                      zoneDeep: e.zoneDeep,
+                    );
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(success ? 'Added to Second Brain favorites!' : 'Removed from favorites'),
+                      duration: const Duration(seconds: 1),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                } catch (err) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to update favorite: $err')),
+                  );
+                }
+              },
+              child: Container(
+                width: 40, height: 40, margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: e.isFavorite ? const Color(0x24C9A84C) : const Color(0x12FFFFFF),
+                  border: Border.all(
+                    color: e.isFavorite ? InsightrColors.borderGold : const Color(0x1AFFFFFF),
+                    width: 1,
+                  ),
+                ),
+                child: Icon(
+                  e.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
+                  size: 18,
+                  color: e.isFavorite ? InsightrColors.goldPrimary : InsightrColors.textSecondary,
+                ),
+              ),
+            ),
+            GestureDetector(
               onTap: () {
                 Clipboard.setData(ClipboardData(text: e.sourceUrl));
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -173,6 +225,95 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
               // ── Action Items ──────────────────────────────────────────────
               if (substance.actionItems.isNotEmpty) ...[
                 const SizedBox(height: 4),
+                GestureDetector(
+                  onTap: () async {
+                    try {
+                      final newImpl = !e.isImplementing;
+                      final success = await _api.toggleImplementing(e.id, newImpl);
+                      if (!mounted) return;
+                      setState(() {
+                        _entry = Entry(
+                          id: e.id,
+                          title: e.title,
+                          sourceUrl: e.sourceUrl,
+                          field: e.field,
+                          tags: e.tags,
+                          contentType: e.contentType,
+                          isFavorite: e.isFavorite,
+                          isImplementing: success,
+                          createdAt: e.createdAt,
+                          zoneGrab: e.zoneGrab,
+                          zoneSubstance: e.zoneSubstance,
+                          zoneDeep: e.zoneDeep,
+                        );
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(success
+                              ? 'Added to your global Actions list!'
+                              : 'Removed from global Actions list'),
+                          duration: const Duration(seconds: 1),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    } catch (err) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to update: $err')),
+                      );
+                    }
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: e.isImplementing
+                          ? const Color(0x1F4CAF50)
+                          : const Color(0x12FFFFFF),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: e.isImplementing
+                            ? const Color(0x8081C784)
+                            : const Color(0x1AFFFFFF),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          e.isImplementing ? Icons.task_alt_rounded : Icons.add_task_rounded,
+                          size: 18,
+                          color: e.isImplementing ? const Color(0xFF81C784) : InsightrColors.goldPrimary,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            e.isImplementing
+                                ? 'Implementing Action Plan'
+                                : 'Start Implementing',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: e.isImplementing ? const Color(0xFFE8F5E9) : Colors.white,
+                            ),
+                          ),
+                        ),
+                        if (e.isImplementing)
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            size: 16,
+                            color: Color(0xFF81C784),
+                          )
+                        else
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            size: 16,
+                            color: Colors.white30,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
                 _ActionItemsSection(items: substance.actionItems),
                 const SizedBox(height: 16),
               ],

@@ -46,7 +46,6 @@ Every processed entry contains all 12. Returned via `GET /api/entries/{id}` as a
 | 6b | Deep Research Prompt | Separate | `/api/entries/{id}/deep-research-prompt` | Plain endpoint response |
 | 7 | Knowledge Cards | Zone 3 | `zone_deep.knowledge_cards` | `[{ id, concept_type, name, summary }]` |
 | 8 | Referenced Artifacts | Zone 3 | `zone_deep.referenced_artifacts` | `[{ name, type, description, url, snippet }]` |
-| 10 | Topic Map | Zone 3 | `zone_deep.topic_map` | `{ main_topic, subtopics[] }` |
 | 11 | Time & Effort | Zone 3 | `zone_deep.effort_estimation` | `{ time_to_learn, time_to_implement, difficulty (1-5), effort (1-5), difficulty_rationale }` |
 | 12 | What's Missing | Zone 3 | `zone_deep.missing_context` | `[{ category, text }]` |
 
@@ -382,16 +381,6 @@ Obsidian-flavoured Markdown.
         "snippet": null
       }
     ],
-    "topic_map": {
-      "main_topic": "AI-Assisted SaaS",
-      "subtopics": [
-        "Solo Founder Strategy",
-        "AI Build Tools",
-        "Distribution Channels",
-        "Pricing",
-        "Community Launch"
-      ]
-    },
     "effort_estimation": {
       "time_to_learn": "8–12 hours",
       "time_to_implement": "60–90 days",

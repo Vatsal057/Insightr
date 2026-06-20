@@ -3,7 +3,7 @@
 /// For physical device: replace with your machine's LAN IP
 class AppConstants {
   // Backend base URL. Can be overridden via --dart-define=API_BASE_URL=...
-  static const String baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:8000');
+  static const String baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8000');
 
   // API endpoints
   static const String feedEndpoint = '/api/feed';

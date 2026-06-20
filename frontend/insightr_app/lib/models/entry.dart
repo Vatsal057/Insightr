@@ -8,6 +8,8 @@ class Entry {
   final String field;
   final List<String> tags;
   final String contentType;
+  final bool isFavorite;
+  final bool isImplementing;
   final String createdAt;
 
   // Zone 1 — The Grab
@@ -26,6 +28,8 @@ class Entry {
     required this.field,
     required this.tags,
     required this.contentType,
+    required this.isFavorite,
+    required this.isImplementing,
     required this.createdAt,
     required this.zoneGrab,
     required this.zoneSubstance,
@@ -40,6 +44,8 @@ class Entry {
       field: json['field'] as String? ?? '',
       tags: List<String>.from(json['tags'] as List? ?? []),
       contentType: json['content_type'] as String? ?? '',
+      isFavorite: json['is_favorite'] as bool? ?? false,
+      isImplementing: json['is_implementing'] as bool? ?? false,
       createdAt: json['created_at'] as String? ?? '',
       zoneGrab: ZoneGrab.fromJson(json['zone_grab'] as Map<String, dynamic>? ?? {}),
       zoneSubstance: ZoneSubstance.fromJson(json['zone_substance'] as Map<String, dynamic>? ?? {}),
