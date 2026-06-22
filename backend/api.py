@@ -42,7 +42,7 @@ from markdown_export import entry_to_markdown
 app = FastAPI(
     title="Insightr API",
     description="Transform short-form content into structured knowledge.",
-    version="2.0.0",
+    version="3.0.0",
 )
 
 app.add_middleware(
@@ -129,12 +129,19 @@ import traceback
 tasks: dict = {}
 
 
-def _process_task(task_id: str, url: str):
+def _resolve_user(username: str) -> int:
+    """Resolves a username to a user_id, creating the user if needed."""
+    config = load_config()
+    db.init_db(config["db_path"])
+    return db.get_or_create_user(config["db_path"], username)
+
+
+def _process_task(task_id: str, url: str, user_id: int):
     print(f"[*] Starting ingestion for task {task_id}: {url}")
     try:
         config = load_config()
         db.init_db(config["db_path"])
-        entry_id = run_process(url, config)
+        entry_id = run_process(url, config, user_id=user_id)
         tasks[task_id] = {"status": "completed", "entry_id": entry_id}
         print(f"[*] Task {task_id} completed successfully. Entry ID: {entry_id}")
     except Exception as e:
@@ -196,16 +203,32 @@ async def read_root():
     return HTMLResponse(content=html_content, status_code=200)
 
 
+# ── User Management ─────────────────────────────────────────────────────────
+
+@app.post("/api/register", summary="Register or login a user")
+async def register_user(username: str = Form(...)):
+    """
+    Registers a new user or returns existing user info.
+    The app calls this on first launch with the name the user enters.
+    """
+    config = load_config()
+    db.init_db(config["db_path"])
+    user_id = db.get_or_create_user(config["db_path"], username.strip())
+    return {"user_id": user_id, "username": username.strip().lower()}
+
+
 @app.post("/api/process", summary="Start processing a URL")
-async def process_url(background_tasks: BackgroundTasks, url: str = Form(...)):
+async def process_url(background_tasks: BackgroundTasks, url: str = Form(...), username: str = Form(...)):
     """
     Starts the full pipeline (download → transcribe → OCR → LLM extraction)
     for a reel or post URL. Returns a task_id to poll.
+    Requires username to associate the entry with a user.
     """
     import uuid
+    user_id = _resolve_user(username)
     task_id = str(uuid.uuid4())
     tasks[task_id] = {"status": "processing", "url": url}
-    background_tasks.add_task(_process_task, task_id, url)
+    background_tasks.add_task(_process_task, task_id, url, user_id)
     return {"task_id": task_id, "status": "processing", "url": url}
 
 
@@ -225,14 +248,18 @@ async def get_status(task_id: str):
 # ── Feed & Entry Detail ─────────────────────────────────────────────────────
 
 @app.get("/api/feed", summary="Get feed of processed insights")
-async def get_feed(limit: int = 50):
+async def get_feed(limit: int = 50, username: str = None):
     """
     Returns compact summary cards for the feed/list view, newest first.
     Each card includes action_item_count for the feed UI chips.
+    Filter by username to get only that user's entries.
     """
     config = load_config()
     db.init_db(config["db_path"])
-    rows = db.list_entries(config["db_path"], limit=limit)
+    user_id = None
+    if username:
+        user_id = db.get_or_create_user(config["db_path"], username)
+    rows = db.list_entries(config["db_path"], limit=limit, user_id=user_id)
     cards = []
     for row in rows:
         entry = db.get_entry(config["db_path"], row["id"])
@@ -298,13 +325,17 @@ async def get_deep_research_prompt(entry_id: int):
 # ── Action Items (Feature 2) ────────────────────────────────────────────────
 
 @app.get("/api/todo", summary="List action items across all entries")
-async def list_todo(done: bool = None):
+async def list_todo(done: bool = None, username: str = None):
     """
     Returns action items. Filter by done=true/false or omit for all.
+    Filter by username to get only that user's items.
     """
     config = load_config()
     db.init_db(config["db_path"])
-    rows = db.list_action_items(config["db_path"], done=done)
+    user_id = None
+    if username:
+        user_id = db.get_or_create_user(config["db_path"], username)
+    rows = db.list_action_items(config["db_path"], done=done, user_id=user_id)
     results = []
     for row in rows:
         d = dict(row)
@@ -327,14 +358,17 @@ async def check_todo(item_id: int, done: bool = True):
 # ── Search ──────────────────────────────────────────────────────────────────
 
 @app.get("/api/search", summary="Full-text search across the vault")
-async def search(q: str = "", tag: str = None, field: str = None, content_type: str = None):
+async def search(q: str = "", tag: str = None, field: str = None, content_type: str = None, username: str = None):
     """
     FTS5 search across title, summary, key points, claims, tags, and tool names.
-    Supports optional filters: tag, field, content_type.
+    Supports optional filters: tag, field, content_type, username.
     """
     config = load_config()
     db.init_db(config["db_path"])
-    rows = db.search_entries(config["db_path"], q, tag=tag, field=field, content_type=content_type)
+    user_id = None
+    if username:
+        user_id = db.get_or_create_user(config["db_path"], username)
+    rows = db.search_entries(config["db_path"], q, tag=tag, field=field, content_type=content_type, user_id=user_id)
     return [dict(row) for row in rows]
 
 
@@ -365,19 +399,23 @@ async def get_concept_entries(concept_id: int):
 # ── Collections ─────────────────────────────────────────────────────────────
 
 @app.get("/api/collections", summary="List all collections")
-async def list_collections():
+async def list_collections(username: str = None):
     config = load_config()
     db.init_db(config["db_path"])
-    rows = db.list_collections(config["db_path"])
+    user_id = None
+    if username:
+        user_id = db.get_or_create_user(config["db_path"], username)
+    rows = db.list_collections(config["db_path"], user_id=user_id)
     return [dict(row) for row in rows]
 
 
 @app.post("/api/collections", summary="Add entry to a collection")
-async def add_to_collection(name: str = Form(...), entry_id: int = Form(...)):
+async def add_to_collection(name: str = Form(...), entry_id: int = Form(...), username: str = Form("default")):
     """Creates the collection if it doesn't exist, then adds the entry."""
     config = load_config()
     db.init_db(config["db_path"])
-    db.add_to_collection(config["db_path"], name, entry_id)
+    user_id = db.get_or_create_user(config["db_path"], username)
+    db.add_to_collection(config["db_path"], name, entry_id, user_id=user_id)
     return {"name": name, "entry_id": entry_id}
 
 

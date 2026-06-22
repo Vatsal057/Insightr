@@ -17,7 +17,6 @@ class AddUrlSheet extends StatefulWidget {
 
 class _AddUrlSheetState extends State<AddUrlSheet> {
   final _controller = TextEditingController();
-  String _selectedPlatform = '';
 
   @override
   void dispose() {
@@ -114,29 +113,8 @@ class _AddUrlSheetState extends State<AddUrlSheet> {
             ),
           ),
           const SizedBox(height: 8),
-          Text('Instagram, TikTok or YouTube Short',
+          Text('Instagram, TikTok, or YouTube Shorts',
             style: GoogleFonts.inter(fontSize: 12, color: InsightrColors.textMuted)),
-          const SizedBox(height: 14),
-          // Platform chips
-          Row(children: [
-            _PlatformChip(
-              label: 'Instagram', color: const Color(0xFFE91E8C),
-              isSelected: _selectedPlatform == 'Instagram',
-              onTap: () => setState(() => _selectedPlatform = 'Instagram'),
-            ),
-            const SizedBox(width: 10),
-            _PlatformChip(
-              label: 'TikTok', color: const Color(0xFF69C9D0),
-              isSelected: _selectedPlatform == 'TikTok',
-              onTap: () => setState(() => _selectedPlatform = 'TikTok'),
-            ),
-            const SizedBox(width: 10),
-            _PlatformChip(
-              label: 'YouTube', color: const Color(0xFFFF4444),
-              isSelected: _selectedPlatform == 'YouTube',
-              onTap: () => setState(() => _selectedPlatform = 'YouTube'),
-            ),
-          ]),
           const SizedBox(height: 20),
           // Also allow typing
           TextField(
@@ -174,41 +152,3 @@ class _AddUrlSheetState extends State<AddUrlSheet> {
   }
 }
 
-class _PlatformChip extends StatelessWidget {
-  final String label;
-  final Color color;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _PlatformChip({
-    required this.label,
-    required this.color,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withAlpha(26) : const Color(0x0DFFFFFF),
-          borderRadius: InsightrRadii.fullAll,
-          border: Border.all(
-            color: isSelected ? color.withAlpha(102) : const Color(0x14FFFFFF), width: 1,
-          ),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-          const SizedBox(width: 8),
-          Text(label, style: GoogleFonts.inter(
-            fontSize: 13, fontWeight: FontWeight.w500, color: InsightrColors.textPrimary,
-          )),
-        ]),
-      ),
-    );
-  }
-}

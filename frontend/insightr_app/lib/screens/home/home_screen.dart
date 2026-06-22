@@ -31,7 +31,12 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _loading = true;
   String? _error;
 
-  // Filters derived from actual feed card fields (populated after load)
+  String get _displayName {
+    final name = _api.username;
+    if (name.isEmpty) return 'there';
+    // Capitalize first letter
+    return name[0].toUpperCase() + name.substring(1);
+  }
 
   @override
   void initState() {
@@ -107,23 +112,26 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Hi there 👋', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700)),
+              Text('Hi $_displayName 👋', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700)),
               Text('Welcome back', style: GoogleFonts.inter(fontSize: 12, color: InsightrColors.textSecondary)),
             ])),
-            Container(
-              width: 40, height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0x0FFFFFFF),
-                border: Border.all(color: const Color(0x14FFFFFF), width: 1),
+            GestureDetector(
+              onTap: () => setState(() => _navIndex = 3),
+              child: Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0x0FFFFFFF),
+                  border: Border.all(color: const Color(0x14FFFFFF), width: 1),
+                ),
+                child: const Icon(Icons.search_rounded, size: 18, color: InsightrColors.textSecondary),
               ),
-              child: const Icon(Icons.notifications_none_rounded, size: 18, color: InsightrColors.textSecondary),
             ),
           ]),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-          child: Text('Your Vault', style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: InsightrColors.textPrimary)),
+          child: Text('Feed', style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: InsightrColors.textPrimary)),
         ),
         // Filter pills
         SizedBox(

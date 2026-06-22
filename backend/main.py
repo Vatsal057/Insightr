@@ -9,6 +9,7 @@ from downloader import download_content
 from transcriber import extract_audio, transcribe, timeline_to_text
 from extractor import extract_smart_keyframes
 from ocr import extract_ocr_timeline
+from vision import describe_frames
 from llm import extract_knowledge
 import db
 import connections
@@ -38,9 +39,13 @@ def load_config():
     db_path = os.getenv("VAULT_DB_PATH", "").strip() or "vault.db"
     export_path = os.getenv("VAULT_EXPORT_PATH", "").strip() or "exports"
     cookies_path = os.getenv("INSTAGRAM_COOKIES_PATH", "").strip()
+    hf_token = os.getenv("HF_TOKEN", "").strip()
+    groq_key = os.getenv("GROQ_API_KEY", "").strip()
 
     errors = []
+    warnings = []
 
+    # Gemini is fallback — still required
     if not api_key or api_key == "your_gemini_api_key_here":
         errors.append(
             "  - GEMINI_API_KEY is not set.\n"
@@ -48,9 +53,20 @@ def load_config():
             "    Then add it to your .env file."
         )
 
+    # HF and Groq are primary — warn if missing (will fallback to Gemini)
+    if not hf_token or hf_token == "your_huggingface_token_here":
+        warnings.append("  - HF_TOKEN not set. Vision + transcription will use local fallbacks.")
+
+    if not groq_key or groq_key == "your_groq_api_key_here":
+        warnings.append("  - GROQ_API_KEY not set. LLM extraction will use Gemini fallback.")
+
     if errors:
         error_msg = "\n".join(errors)
         raise ValueError(f"Setup required. Fix these issues in your .env file:\n{error_msg}")
+
+    if warnings:
+        for w in warnings:
+            print(f"[Config] Warning: {w}")
 
     return {
         "gemini_api_key": api_key,
@@ -62,7 +78,7 @@ def load_config():
 
 import uuid
 
-def run_process(url: str, config: dict, export_md: bool = False):
+def run_process(url: str, config: dict, export_md: bool = False, user_id: int = 1):
     """
     Main processing pipeline. Downloads, transcribes, extracts keyframes + OCR,
     builds timelines, extracts a structured insight card (entry + concepts),
@@ -79,7 +95,7 @@ def run_process(url: str, config: dict, export_md: bool = False):
     try:
         print(f"\n[Vault] Processing: {url}\n")
 
-        print("  [1/5] Downloading content...")
+        print("  [1/6] Downloading content...")
         content_type, data, caption = download_content(url, temp_video, config["cookies_path"])
         print(f"        Done ({content_type}).")
 
@@ -87,21 +103,19 @@ def run_process(url: str, config: dict, export_md: bool = False):
         transcript_timeline = []
 
         if content_type == "video":
-            print("  [2/5] Extracting audio...")
+            print("  [2/6] Extracting audio & keyframes...")
             extract_audio(temp_video, temp_audio)
-            print("        Done.")
 
-            print("  [2/5] Extracting keyframes...")
             frames = extract_smart_keyframes(temp_video, max_frames=12)
             print(f"        Found {len(frames)} keyframes.")
 
-            print("  [3/5] Transcribing speech (this may take 30-60 seconds)...")
+            print("  [3/6] Transcribing speech...")
             transcript_timeline = transcribe(temp_audio)
             word_count = len(timeline_to_text(transcript_timeline).split())
             print(f"        Transcribed {word_count} words across {len(transcript_timeline)} segments.")
 
         else:  # images
-            print("  [2/5] Processing images...")
+            print("  [2/6] Processing images...")
             for idx, img_path in enumerate(data[:15]):
                 with open(img_path, "rb") as f:
                     frames.append({
@@ -109,11 +123,19 @@ def run_process(url: str, config: dict, export_md: bool = False):
                         "image_b64": base64.b64encode(f.read()).decode("utf-8"),
                     })
             print(f"        Encoded {len(frames)} images.")
-            print("  [3/5] Skipping transcription (no audio).")
+            print("  [3/6] Skipping transcription (no audio).")
 
-        print("  [4/5] Running OCR on frames...")
+        print("  [4/6] Running OCR on frames...")
         ocr_timeline = extract_ocr_timeline(frames)
         print(f"        Found on-screen text in {len(ocr_timeline)} frame(s).")
+
+        print("  [5/6] Describing frames visually (Florence-2)...")
+        visual_timeline = []
+        try:
+            visual_timeline = describe_frames(frames)
+            print(f"        Got descriptions for {len(visual_timeline)} frame(s).")
+        except Exception as e:
+            print(f"        Vision failed ({e}). Continuing without visual descriptions.")
 
         metadata = {
             "source_url": url,
@@ -121,7 +143,7 @@ def run_process(url: str, config: dict, export_md: bool = False):
             "caption": caption if caption.strip() else "[No caption available]",
         }
 
-        print(f"  [5/5] Extracting knowledge ({len(frames)} visual signals)...")
+        print(f"  [6/6] Extracting knowledge ({len(frames)} visual signals)...")
         entry = extract_knowledge(
             transcript_timeline=transcript_timeline,
             ocr_timeline=ocr_timeline,
@@ -129,11 +151,12 @@ def run_process(url: str, config: dict, export_md: bool = False):
             api_key=config["gemini_api_key"],
             source_url=url,
             metadata=metadata,
+            visual_timeline=visual_timeline,
         )
         print("        Done.")
 
         # Save to database
-        entry_id = db.save_entry(config["db_path"], entry)
+        entry_id = db.save_entry(config["db_path"], entry, user_id=user_id)
         entry.id = entry_id
 
         # Save concepts (deduplicated against existing concepts)

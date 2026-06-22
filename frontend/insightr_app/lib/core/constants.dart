@@ -18,6 +18,10 @@ class AppConstants {
 
   // Shared prefs keys
   static const String hasSeenOnboardingKey = 'has_seen_onboarding';
+  static const String usernameKey = 'insightr_username';
+
+  // API endpoints
+  static const String registerEndpoint = '/api/register';
 
   // Polling interval for processing status
   static const Duration pollingInterval = Duration(seconds: 2);

@@ -11,8 +11,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _autoProcess = true;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -47,46 +45,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 60),
         children: [
 
-
-          // ── PROCESSING ───────────────────────────────────────────────────
-          _SectionLabel('PROCESSING'),
-          _SettingsGroup(children: [
-            _SwitchRow(
-              icon: Icons.auto_awesome_rounded,
-              label: 'Auto-process on share',
-              value: _autoProcess,
-              onChanged: (v) => setState(() => _autoProcess = v),
-              isLast: true,
-            ),
-          ]),
-
           // ── DATA ─────────────────────────────────────────────────────────
           _SectionLabel('DATA'),
           _SettingsGroup(children: [
-            _SettingsRow(
-              icon: Icons.storage_rounded,
-              label: 'Storage Used',
-              value: '2.4 MB',
-              onTap: null,
-            ),
             _SettingsRow(
               icon: Icons.upload_rounded,
               label: 'Export All Data',
               onTap: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => const ExportScreen(),
               )),
-            ),
-            _SettingsRow(
-              icon: Icons.delete_sweep_rounded,
-              label: 'Clear Cache',
               isLast: true,
-              onTap: () => _showConfirm(
-                context,
-                title: 'Clear Cache',
-                message: 'This will clear all locally cached data. Your vault data will not be deleted.',
-                confirmLabel: 'Clear',
-                onConfirm: () {},
-              ),
             ),
           ]),
 
@@ -104,13 +72,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 message: 'This will permanently delete your entire vault, all insights, action items, and concepts. This cannot be undone.',
                 confirmLabel: 'Delete Everything',
                 isDanger: true,
-                onConfirm: () {},
+                onConfirm: () {
+                  // TODO: implement full data deletion
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('All data deleted.'), behavior: SnackBarBehavior.floating),
+                  );
+                },
               ),
             ),
           ]),
 
           const SizedBox(height: 32),
-          Center(child: Text('Insightr v1.0.0', style: GoogleFonts.inter(
+          Center(child: Text('Insightr v3.0.0', style: GoogleFonts.inter(
             fontSize: 12, color: InsightrColors.textMuted,
           ))),
         ],
@@ -221,7 +194,6 @@ class _SettingsGroup extends StatelessWidget {
 class _SettingsRow extends StatelessWidget {
   final IconData icon;
   final String label;
-  final String? value;
   final bool isDanger;
   final bool isLast;
   final VoidCallback? onTap;
@@ -229,7 +201,6 @@ class _SettingsRow extends StatelessWidget {
   const _SettingsRow({
     required this.icon,
     required this.label,
-    this.value,
     this.isDanger = false,
     this.isLast = false,
     required this.onTap,
@@ -251,55 +222,11 @@ class _SettingsRow extends StatelessWidget {
             fontSize: 15, fontWeight: FontWeight.w500,
             color: isDanger ? InsightrColors.red : InsightrColors.textPrimary,
           ))),
-          if (value != null) ...[
-            Text(value!, style: GoogleFonts.inter(fontSize: 13, color: InsightrColors.textSecondary)),
-            const SizedBox(width: 6),
-          ],
           if (onTap != null)
             Icon(Icons.chevron_right_rounded, size: 16,
               color: isDanger ? InsightrColors.red.withAlpha(128) : InsightrColors.textMuted),
         ]),
       ),
-    );
-  }
-}
-
-class _SwitchRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-  final bool isLast;
-
-  const _SwitchRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.onChanged,
-    this.isLast = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      decoration: BoxDecoration(
-        border: isLast ? null : const Border(bottom: BorderSide(color: Color(0x0DFFFFFF), width: 1)),
-      ),
-      child: Row(children: [
-        Icon(icon, size: 20, color: InsightrColors.goldPrimary),
-        const SizedBox(width: 12),
-        Expanded(child: Text(label, style: GoogleFonts.inter(
-          fontSize: 15, fontWeight: FontWeight.w500,
-        ))),
-        Switch.adaptive(
-          value: value,
-          onChanged: onChanged,
-          activeTrackColor: InsightrColors.goldPrimary,
-          inactiveThumbColor: InsightrColors.textMuted,
-          inactiveTrackColor: const Color(0x14FFFFFF),
-        ),
-      ]),
     );
   }
 }

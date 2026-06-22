@@ -102,7 +102,7 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(success ? 'Added to Second Brain favorites!' : 'Removed from favorites'),
+                      content: Text(success ? 'Added to favorites' : 'Removed from favorites'),
                       duration: const Duration(seconds: 1),
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -250,8 +250,8 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(success
-                              ? 'Added to your global Actions list!'
-                              : 'Removed from global Actions list'),
+                              ? 'Actions now visible in your Actions tab'
+                              : 'Removed from Actions tab'),
                           duration: const Duration(seconds: 1),
                           behavior: SnackBarBehavior.floating,
                         ),
@@ -289,8 +289,8 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
                         Expanded(
                           child: Text(
                             e.isImplementing
-                                ? 'Implementing Action Plan'
-                                : 'Start Implementing',
+                                ? 'Tracking in Actions tab ✓'
+                                : 'Track in Actions tab',
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -340,9 +340,9 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
                     )],
                   ),
                   child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    const Icon(Icons.bolt_rounded, color: Color(0xFF1A1200), size: 18),
+                    const Icon(Icons.auto_awesome_rounded, color: Color(0xFF1A1200), size: 18),
                     const SizedBox(width: 8),
-                    Text('Go Deeper', style: GoogleFonts.inter(
+                    Text('Concepts & Connections', style: GoogleFonts.inter(
                       fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF1A1200),
                     )),
                   ]),

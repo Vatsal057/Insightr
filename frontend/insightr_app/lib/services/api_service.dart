@@ -36,6 +36,13 @@ class ApiService {
 
   final _client = http.Client();
   String _base = AppConstants.baseUrl;
+  String _username = '';
+
+  String get username => _username;
+
+  void setUsername(String name) {
+    _username = name.trim().toLowerCase();
+  }
 
   Future<void> initialize() async {
     // Attempt UDP broadcast discovery
@@ -149,11 +156,17 @@ class ApiService {
 
   // ─── Feed & Entries ───────────────────────────────────────────────────────
 
+  /// Registers or logs in a user. Returns the user_id.
+  Future<int> register(String username) async {
+    final data = await _post(AppConstants.registerEndpoint, {'username': username});
+    _username = (data as Map<String, dynamic>)['username'] as String? ?? username;
+    return data['user_id'] as int;
+  }
+
   Future<List<FeedCard>> getFeed({int limit = AppConstants.feedLimit}) async {
-    final data = await _get(
-      AppConstants.feedEndpoint,
-      params: {'limit': limit.toString()},
-    ) as List;
+    final params = <String, String>{'limit': limit.toString()};
+    if (_username.isNotEmpty) params['username'] = _username;
+    final data = await _get(AppConstants.feedEndpoint, params: params) as List;
     return data
         .map((e) => FeedCard.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -191,8 +204,9 @@ class ApiService {
 
   /// Returns a task_id to poll with [pollStatus].
   Future<String> processUrl(String url) async {
-    final data =
-        await _postLong(AppConstants.processEndpoint, {'url': url});
+    final formData = <String, String>{'url': url};
+    if (_username.isNotEmpty) formData['username'] = _username;
+    final data = await _postLong(AppConstants.processEndpoint, formData);
     return (data as Map<String, dynamic>)['task_id'] as String? ?? '';
   }
 
@@ -205,8 +219,10 @@ class ApiService {
   // ─── Action Items ─────────────────────────────────────────────────────────
 
   Future<List<ActionItem>> getTodo({bool? done}) async {
-    final params = done != null ? {'done': done.toString()} : null;
-    final data = await _get(AppConstants.todoEndpoint, params: params) as List;
+    final params = <String, String>{};
+    if (done != null) params['done'] = done.toString();
+    if (_username.isNotEmpty) params['username'] = _username;
+    final data = await _get(AppConstants.todoEndpoint, params: params.isEmpty ? null : params) as List;
     return data
         .map((e) => ActionItem.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -227,6 +243,7 @@ class ApiService {
     if (tag != null) params['tag'] = tag;
     if (field != null) params['field'] = field;
     if (contentType != null) params['content_type'] = contentType;
+    if (_username.isNotEmpty) params['username'] = _username;
 
     final data =
         await _get(AppConstants.searchEndpoint, params: params) as List;
@@ -263,15 +280,18 @@ class ApiService {
   // ─── Collections ─────────────────────────────────────────────────────────
 
   Future<List<Collection>> getCollections() async {
-    final data = await _get(AppConstants.collectionsEndpoint) as List;
+    final params = <String, String>{};
+    if (_username.isNotEmpty) params['username'] = _username;
+    final data = await _get(AppConstants.collectionsEndpoint, params: params.isEmpty ? null : params) as List;
     return data
         .map((e) => Collection.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 
   Future<void> createCollection(String name, int entryId) async {
-    await _post(AppConstants.collectionsEndpoint,
-        {'name': name, 'entry_id': entryId.toString()});
+    final formData = <String, String>{'name': name, 'entry_id': entryId.toString()};
+    if (_username.isNotEmpty) formData['username'] = _username;
+    await _post(AppConstants.collectionsEndpoint, formData);
   }
 
   Future<List<FeedCard>> getCollectionEntries(String name) async {

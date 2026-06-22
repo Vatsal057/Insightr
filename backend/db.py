@@ -18,8 +18,15 @@ from keywords import extract_keywords
 
 
 SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS users (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS entries (
     id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id              INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title                TEXT NOT NULL,
     source_url           TEXT NOT NULL,
     field                TEXT NOT NULL,
@@ -94,8 +101,10 @@ CREATE TABLE IF NOT EXISTS entry_concepts (
 );
 
 CREATE TABLE IF NOT EXISTS collections (
-    id   INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE NOT NULL
+    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name    TEXT NOT NULL,
+    UNIQUE (user_id, name)
 );
 
 CREATE TABLE IF NOT EXISTS collection_entries (
@@ -125,12 +134,19 @@ MIGRATION_COLUMNS = [
     ("hook",                 "TEXT NOT NULL DEFAULT ''"),
     ("is_favorite",          "INTEGER NOT NULL DEFAULT 0"),
     ("is_implementing",      "INTEGER NOT NULL DEFAULT 0"),
+    # v3 multi-user
+    ("user_id",              "INTEGER NOT NULL DEFAULT 1"),
 ]
 
 # Migrations for child tables (action_items columns added post-launch)
 MIGRATION_ACTION_ITEMS_COLUMNS = [
     ("priority",      "TEXT NOT NULL DEFAULT 'soon'"),
     ("time_estimate", "TEXT"),
+]
+
+# Migrations for collections table
+MIGRATION_COLLECTIONS_COLUMNS = [
+    ("user_id", "INTEGER NOT NULL DEFAULT 1"),
 ]
 
 
@@ -142,6 +158,22 @@ def get_connection(db_path: str) -> sqlite3.Connection:
 
 
 def _migrate(conn: sqlite3.Connection) -> None:
+    # 0. Ensure users table exists (for upgrades from pre-multiuser schema)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id       INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    """)
+    # Ensure a default user exists for legacy data
+    existing_default = conn.execute("SELECT id FROM users WHERE id = 1").fetchone()
+    if not existing_default:
+        conn.execute(
+            "INSERT OR IGNORE INTO users (id, username, created_at) VALUES (1, 'default', ?)",
+            (datetime.now().isoformat(),)
+        )
+
     # 1. Standard entries table migrations
     existing = {row["name"] for row in conn.execute("PRAGMA table_info(entries)")}
     for col_name, col_def in MIGRATION_COLUMNS:
@@ -153,16 +185,18 @@ def _migrate(conn: sqlite3.Connection) -> None:
     for col_name, col_def in MIGRATION_ACTION_ITEMS_COLUMNS:
         if col_name not in existing_ai:
             conn.execute(f"ALTER TABLE action_items ADD COLUMN {col_name} {col_def}")
+
+    # 3. collections table migrations
+    existing_coll = {row["name"] for row in conn.execute("PRAGMA table_info(collections)")}
+    for col_name, col_def in MIGRATION_COLLECTIONS_COLUMNS:
+        if col_name not in existing_coll:
+            conn.execute(f"ALTER TABLE collections ADD COLUMN {col_name} {col_def}")
     
-    # 2. FTS migration — FTS5 doesn't support ALTER TABLE. 
-    # Check if action_items_text exists in the virtual table. 
-    # If not, recreate it from the main entries table.
+    # 4. FTS migration — FTS5 doesn't support ALTER TABLE. 
     try:
         conn.execute("SELECT action_items_text FROM entries_fts LIMIT 1")
     except sqlite3.OperationalError:
-        # Recreate FTS table
         conn.execute("DROP TABLE IF EXISTS entries_fts")
-        # Define the exact FTS5 creation SQL
         fts_sql = """
         CREATE VIRTUAL TABLE entries_fts USING fts5(
             title, summary_text, key_points, claims_text, tags_text, tools_text, action_items_text,
@@ -170,7 +204,6 @@ def _migrate(conn: sqlite3.Connection) -> None:
         )
         """
         conn.execute(fts_sql)
-        # Re-index everything (this is fast for small-medium vaults)
         conn.execute("""
             INSERT INTO entries_fts (rowid, title, summary_text, key_points, claims_text, tags_text, tools_text, action_items_text)
             SELECT e.id, e.title, e.summary, e.key_points, '', '', '', ''
@@ -201,7 +234,38 @@ def _get_or_create_tag(conn: sqlite3.Connection, name: str) -> int:
     return cur.lastrowid
 
 
-def save_entry(db_path: str, entry: KnowledgeEntry) -> int:
+# ---------------------------------------------------------------------------
+# User management
+# ---------------------------------------------------------------------------
+
+def get_or_create_user(db_path: str, username: str) -> int:
+    """Gets existing user by username or creates a new one. Returns user_id."""
+    conn = get_connection(db_path)
+    try:
+        username = username.strip().lower()
+        row = conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+        if row:
+            return row["id"]
+        cur = conn.execute(
+            "INSERT INTO users (username, created_at) VALUES (?, ?)",
+            (username, datetime.now().isoformat()),
+        )
+        conn.commit()
+        return cur.lastrowid
+    finally:
+        conn.close()
+
+
+def list_users(db_path: str) -> List[sqlite3.Row]:
+    """Returns all registered users."""
+    conn = get_connection(db_path)
+    try:
+        return conn.execute("SELECT id, username, created_at FROM users ORDER BY id").fetchall()
+    finally:
+        conn.close()
+
+
+def save_entry(db_path: str, entry: KnowledgeEntry, user_id: int = 1) -> int:
     conn = get_connection(db_path)
     try:
         # Build keyword corpus from blocks, concepts, artifacts
@@ -214,15 +278,16 @@ def save_entry(db_path: str, entry: KnowledgeEntry) -> int:
         cur = conn.execute(
             """
             INSERT INTO entries (
-                title, source_url, field, content_type, type_specific_fields,
+                user_id, title, source_url, field, content_type, type_specific_fields,
                 hook, summary, key_points,
                 implementation_plan, tools_resources, rabbit_hole,
                 referenced_artifacts,
                 effort_estimation, missing_context,
                 explore_further, next_step, keywords, note_blocks, is_favorite, is_implementing, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
+                user_id,
                 entry.title,
                 entry.source_url,
                 entry.field,
@@ -413,9 +478,14 @@ def get_entry(db_path: str, entry_id: int) -> Optional[KnowledgeEntry]:
         conn.close()
 
 
-def list_entries(db_path: str, limit: int = 50) -> List[sqlite3.Row]:
+def list_entries(db_path: str, limit: int = 50, user_id: int = None) -> List[sqlite3.Row]:
     conn = get_connection(db_path)
     try:
+        if user_id:
+            return conn.execute(
+                "SELECT id, title, field, created_at FROM entries WHERE user_id = ? ORDER BY id DESC LIMIT ?",
+                (user_id, limit),
+            ).fetchall()
         return conn.execute(
             "SELECT id, title, field, created_at FROM entries ORDER BY id DESC LIMIT ?",
             (limit,),
@@ -426,7 +496,7 @@ def list_entries(db_path: str, limit: int = 50) -> List[sqlite3.Row]:
 
 def search_entries(db_path: str, query: str, tag: Optional[str] = None,
                     field: Optional[str] = None, content_type: Optional[str] = None,
-                    limit: int = 20) -> List[sqlite3.Row]:
+                    limit: int = 20, user_id: int = None) -> List[sqlite3.Row]:
     conn = get_connection(db_path)
     try:
         sql = """
@@ -436,6 +506,10 @@ def search_entries(db_path: str, query: str, tag: Optional[str] = None,
         """
         params: list = []
         conditions = []
+
+        if user_id:
+            conditions.append("e.user_id = ?")
+            params.append(user_id)
 
         if query:
             # Simple sanitization for FTS5: quote the query if it contains special chars
@@ -474,7 +548,7 @@ def search_entries(db_path: str, query: str, tag: Optional[str] = None,
         conn.close()
 
 
-def list_action_items(db_path: str, done: Optional[bool] = None) -> List[sqlite3.Row]:
+def list_action_items(db_path: str, done: Optional[bool] = None, user_id: int = None) -> List[sqlite3.Row]:
     conn = get_connection(db_path)
     try:
         base = """
@@ -484,15 +558,20 @@ def list_action_items(db_path: str, done: Optional[bool] = None) -> List[sqlite3
             WHERE e.is_implementing = 1
         """
         params: list = []
-        where = " AND a.done = ?" if done is not None else ""
+
+        if user_id:
+            base += " AND e.user_id = ?"
+            params.append(user_id)
+
         if done is not None:
+            base += " AND a.done = ?"
             params.append(int(done))
         order = """
             ORDER BY
                 CASE a.priority WHEN 'now' THEN 0 WHEN 'soon' THEN 1 WHEN 'someday' THEN 2 ELSE 1 END,
                 a.entry_id DESC, a.id
         """
-        return conn.execute(base + where + order, params).fetchall()
+        return conn.execute(base + order, params).fetchall()
     finally:
         conn.close()
 
@@ -513,22 +592,22 @@ def set_action_item_done(db_path: str, action_item_id: int, done: bool) -> bool:
 # Collections
 # ---------------------------------------------------------------------------
 
-def get_or_create_collection(db_path: str, name: str) -> int:
+def get_or_create_collection(db_path: str, name: str, user_id: int = 1) -> int:
     conn = get_connection(db_path)
     try:
-        cur = conn.execute("SELECT id FROM collections WHERE name = ?", (name,))
+        cur = conn.execute("SELECT id FROM collections WHERE name = ? AND user_id = ?", (name, user_id))
         row = cur.fetchone()
         if row:
             return row["id"]
-        cur = conn.execute("INSERT INTO collections (name) VALUES (?)", (name,))
+        cur = conn.execute("INSERT INTO collections (name, user_id) VALUES (?, ?)", (name, user_id))
         conn.commit()
         return cur.lastrowid
     finally:
         conn.close()
 
 
-def add_to_collection(db_path: str, collection_name: str, entry_id: int) -> None:
-    collection_id = get_or_create_collection(db_path, collection_name)
+def add_to_collection(db_path: str, collection_name: str, entry_id: int, user_id: int = 1) -> None:
+    collection_id = get_or_create_collection(db_path, collection_name, user_id)
     conn = get_connection(db_path)
     try:
         conn.execute(
@@ -540,9 +619,20 @@ def add_to_collection(db_path: str, collection_name: str, entry_id: int) -> None
         conn.close()
 
 
-def list_collections(db_path: str) -> List[sqlite3.Row]:
+def list_collections(db_path: str, user_id: int = None) -> List[sqlite3.Row]:
     conn = get_connection(db_path)
     try:
+        if user_id:
+            return conn.execute(
+                """
+                SELECT c.id, c.name, COUNT(ce.entry_id) as entry_count
+                FROM collections c
+                LEFT JOIN collection_entries ce ON ce.collection_id = c.id
+                WHERE c.user_id = ?
+                GROUP BY c.id ORDER BY c.name
+                """,
+                (user_id,),
+            ).fetchall()
         return conn.execute(
             """
             SELECT c.id, c.name, COUNT(ce.entry_id) as entry_count

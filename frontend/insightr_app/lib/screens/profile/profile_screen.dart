@@ -20,6 +20,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _conceptCount = 0;
   bool _loading = true;
 
+  String get _displayName {
+    final name = _api.username;
+    if (name.isEmpty) return 'My Vault';
+    return '${name[0].toUpperCase()}${name.substring(1)}\'s Vault';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -89,7 +95,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: const Icon(Icons.person_rounded, size: 32, color: InsightrColors.textPrimary),
               ),
               const SizedBox(height: 12),
-              Text('My Vault', style: GoogleFonts.inter(
+              Text(_displayName, style: GoogleFonts.inter(
                 fontSize: 22, fontWeight: FontWeight.w800,
                 color: InsightrColors.textPrimary,
               )),
@@ -143,21 +149,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 builder: (_) => const SettingsScreen(),
               )),
             ),
-            _ProfileRow(
-              icon: Icons.help_outline_rounded,
-              iconColor: InsightrColors.textSecondary,
-              label: 'Help & Support',
-              onTap: () {},
-            ),
-            _ProfileRow(
-              icon: Icons.privacy_tip_outlined,
-              iconColor: InsightrColors.textSecondary,
-              label: 'Privacy Policy',
-              onTap: () {},
-            ),
 
             const SizedBox(height: 32),
-            Center(child: Text('Insightr v1.0.0', style: GoogleFonts.inter(
+            Center(child: Text('Insightr v3.0.0', style: GoogleFonts.inter(
               fontSize: 12, color: InsightrColors.textMuted,
             ))),
           ],

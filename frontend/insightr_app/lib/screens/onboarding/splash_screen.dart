@@ -39,8 +39,8 @@ class _SplashScreenState extends State<SplashScreen>
         child: Container(
           decoration: const BoxDecoration(
             gradient: RadialGradient(
-              center: Alignment(0, 0.8),
-              radius: 1.2,
+              center: Alignment(0, 0.6),
+              radius: 1.3,
               colors: [Color(0x38C9A84C), Colors.transparent],
             ),
           ),
@@ -49,50 +49,44 @@ class _SplashScreenState extends State<SplashScreen>
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Column(
                 children: [
-                  const SizedBox(height: 60),
+                  const Spacer(flex: 2),
                   // Logo
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Container(
-                      width: 44, height: 44,
-                      decoration: BoxDecoration(
-                        color: InsightrColors.goldPrimary,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [BoxShadow(
-                          color: InsightrColors.goldPrimary.withAlpha(128),
-                          blurRadius: 20, offset: const Offset(0, 4),
-                        )],
-                      ),
-                      child: const Icon(Icons.bolt_rounded, color: Color(0xFF1A1200), size: 22),
+                  Container(
+                    width: 72, height: 72,
+                    decoration: BoxDecoration(
+                      color: InsightrColors.goldPrimary,
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: [BoxShadow(
+                        color: InsightrColors.goldPrimary.withAlpha(128),
+                        blurRadius: 40, offset: const Offset(0, 8),
+                      )],
                     ),
-                    const SizedBox(width: 10),
-                    Text('Insightr', style: GoogleFonts.inter(
-                      fontSize: 22, fontWeight: FontWeight.w700,
-                      color: InsightrColors.textPrimary,
-                    )),
-                  ]),
-                  const Spacer(),
-                  // Floating tags + heading
-                  _FloatingTag(icon: Icons.videocam_rounded, label: 'Short-form videos'),
-                  const SizedBox(height: 20),
+                    child: const Icon(Icons.bolt_rounded, color: Color(0xFF1A1200), size: 36),
+                  ),
+                  const SizedBox(height: 24),
+                  Text('Insightr', style: GoogleFonts.inter(
+                    fontSize: 32, fontWeight: FontWeight.w800,
+                    color: InsightrColors.textPrimary, letterSpacing: -0.5,
+                  )),
+                  const SizedBox(height: 48),
+                  // Main heading
                   RichText(
                     textAlign: TextAlign.center,
                     text: TextSpan(
                       style: GoogleFonts.inter(
-                        fontSize: 56, fontWeight: FontWeight.w800,
-                        letterSpacing: -1.5, height: 1.05,
+                        fontSize: 44, fontWeight: FontWeight.w800,
+                        letterSpacing: -1.5, height: 1.1,
                         color: InsightrColors.textPrimary,
                       ),
                       children: [
-                        const TextSpan(text: 'Knowledge,\n'),
+                        const TextSpan(text: 'Save a reel.\nGet '),
                         TextSpan(
-                          text: 'Captured.',
-                          style: GoogleFonts.inter(
-                            fontSize: 56, fontWeight: FontWeight.w800,
-                            letterSpacing: -1.5,
+                          text: 'real notes.',
+                          style: TextStyle(
                             color: InsightrColors.goldPrimary,
                             shadows: [Shadow(
-                              color: InsightrColors.goldPrimary.withAlpha(102),
-                              blurRadius: 40,
+                              color: InsightrColors.goldPrimary.withAlpha(80),
+                              blurRadius: 30,
                             )],
                           ),
                         ),
@@ -100,43 +94,30 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                   const SizedBox(height: 20),
-                  _FloatingTag(icon: Icons.psychology_rounded, label: 'AI-powered recall'),
-                  const SizedBox(height: 24),
                   Text(
-                    'Turn every reel into structured, searchable\nknowledge — automatically.',
+                    'Paste any Instagram, TikTok, or YouTube reel\nand get structured notes, action items,\nand key takeaways — instantly.',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
-                      fontSize: 16, color: InsightrColors.textSecondary, height: 1.6,
+                      fontSize: 15, color: InsightrColors.textSecondary, height: 1.6,
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(height: 40),
+                  // How it works — 3 quick steps
+                  _StepRow(number: '1', text: 'Paste a reel link'),
+                  const SizedBox(height: 12),
+                  _StepRow(number: '2', text: 'AI extracts the knowledge'),
+                  const SizedBox(height: 12),
+                  _StepRow(number: '3', text: 'Get notes, actions & insights'),
+                  const Spacer(flex: 3),
                   // CTA
                   SizedBox(
-                    width: 280,
+                    width: double.infinity,
                     child: PrimaryButton(
                       label: 'Get Started',
-                      icon: const Icon(Icons.arrow_forward_rounded, color: Color(0xFF1A1200), size: 18),
                       onTap: widget.onComplete,
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Text.rich(TextSpan(
-                    style: GoogleFonts.inter(fontSize: 14, color: InsightrColors.textSecondary),
-                    children: [
-                      const TextSpan(text: 'Already have an account? '),
-                      TextSpan(text: 'Sign in', style: GoogleFonts.inter(
-                        fontSize: 14, color: InsightrColors.goldPrimary, fontWeight: FontWeight.w600,
-                      )),
-                    ],
-                  )),
-                  const SizedBox(height: 20),
-                  // Dots
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    _Dot(active: true), const SizedBox(width: 6),
-                    _Dot(active: false), const SizedBox(width: 6),
-                    _Dot(active: false),
-                  ]),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 50),
                 ],
               ),
             ),
@@ -147,45 +128,31 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-class _FloatingTag extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const _FloatingTag({required this.icon, required this.label});
+class _StepRow extends StatelessWidget {
+  final String number;
+  final String text;
+  const _StepRow({required this.number, required this.text});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-      decoration: BoxDecoration(
-        color: const Color(0x0FFFFFFF),
-        borderRadius: InsightrRadii.fullAll,
-        border: Border.all(color: const Color(0x1EFFFFFF), width: 1),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 16, color: InsightrColors.textPrimary),
-        const SizedBox(width: 8),
-        Text(label, style: GoogleFonts.inter(fontSize: 14, color: InsightrColors.textPrimary)),
-      ]),
-    );
-  }
-}
-
-class _Dot extends StatelessWidget {
-  final bool active;
-  const _Dot({required this.active});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      width: active ? 20 : 8, height: 8,
-      decoration: BoxDecoration(
-        color: active ? InsightrColors.goldPrimary : const Color(0x26FFFFFF),
-        borderRadius: BorderRadius.circular(4),
-        boxShadow: active ? [BoxShadow(
-          color: InsightrColors.goldPrimary.withAlpha(128), blurRadius: 8,
-        )] : null,
-      ),
+    return Row(
+      children: [
+        Container(
+          width: 32, height: 32,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: const Color(0x1AC9A84C),
+            border: Border.all(color: const Color(0x33C9A84C), width: 1),
+          ),
+          child: Center(child: Text(number, style: GoogleFonts.inter(
+            fontSize: 14, fontWeight: FontWeight.w700, color: InsightrColors.goldPrimary,
+          ))),
+        ),
+        const SizedBox(width: 14),
+        Text(text, style: GoogleFonts.inter(
+          fontSize: 16, fontWeight: FontWeight.w500, color: InsightrColors.textPrimary,
+        )),
+      ],
     );
   }
 }
