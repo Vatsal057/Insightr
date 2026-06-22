@@ -120,7 +120,7 @@ async def shutdown_event():
         app.state.udp_task.cancel()
     if async_zc and hasattr(app.state, "zc_info") and app.state.zc_info:
         await async_zc.async_unregister_service(app.state.zc_info)
-        await async_zc.close()
+        await async_zc.async_close()
 
 
 import traceback

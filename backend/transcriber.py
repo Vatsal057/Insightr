@@ -13,7 +13,7 @@ from ocr import format_timestamp
 from schema import TimelineEntry
 
 
-HF_WHISPER_URL = "https://router.hugging-face.cn/models/openai/whisper-large-v3-turbo"
+HF_WHISPER_URL = "https://router.huggingface.co/hf-inference/models/openai/whisper-large-v3-turbo"
 
 
 def extract_audio(video_path: str, audio_path: str) -> str:
@@ -67,6 +67,7 @@ def transcribe_hf(audio_path: str) -> list[TimelineEntry]:
 
     headers = {
         "Authorization": f"Bearer {hf_token}",
+        "Content-Type": "audio/mpeg",
     }
 
     with open(audio_path, "rb") as f:

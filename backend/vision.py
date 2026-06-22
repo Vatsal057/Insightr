@@ -1,81 +1,66 @@
 """
-Vision module — describes keyframes using Florence-2 via the Hugging Face Inference API.
+Vision module — describes keyframes using Groq's Llama 4 Scout (multimodal).
 
-Converts visual frames into text descriptions so that text-only LLMs (like Llama)
-can understand the visual context of a reel without receiving raw images.
+Converts visual frames into text descriptions so that text-only LLMs (like Llama 3.3)
+can understand the visual context of a reel without receiving raw images during
+the main extraction step.
 
-Uses the free HF Serverless Inference API with your HF_TOKEN.
+Uses the free Groq API with GROQ_API_KEY.
 """
 
 from __future__ import annotations
 
 import base64
 import os
-import requests
+
+from groq import Groq
 
 from schema import TimelineEntry
 
 
-HF_API_URL = "https://router.hugging-face.cn/models/microsoft/Florence-2-large"
+def _get_groq_client() -> Groq:
+    key = os.getenv("GROQ_API_KEY", "").strip()
+    if not key:
+        raise RuntimeError("GROQ_API_KEY is not set — needed for vision descriptions.")
+    return Groq(api_key=key)
 
 
-def _get_hf_token() -> str:
-    token = os.getenv("HF_TOKEN", "").strip()
-    if not token:
-        raise RuntimeError("HF_TOKEN is not set in .env — needed for Florence-2 vision API.")
-    return token
-
-
-def describe_frame(image_b64: str, hf_token: str) -> str:
+def describe_frame(image_b64: str, client: Groq) -> str:
     """
-    Sends a single base64-encoded JPEG frame to Florence-2 and returns
-    a text description of what's visible in the frame.
+    Sends a single base64-encoded JPEG frame to Llama 4 Scout via Groq
+    and returns a text description of what's visible in the frame.
 
     Returns an empty string on failure (non-fatal — we still have OCR + transcript).
     """
-    headers = {
-        "Authorization": f"Bearer {hf_token}",
-        "Content-Type": "application/json",
-    }
-
-    # Florence-2 accepts base64 image + a task prompt
-    payload = {
-        "inputs": {
-            "image": image_b64,
-            "text": "<MORE_DETAILED_CAPTION>",
-        },
-    }
-
     try:
-        response = requests.post(HF_API_URL, headers=headers, json=payload, timeout=30)
-
-        if response.status_code == 200:
-            result = response.json()
-            # Florence-2 returns generated text in various formats
-            if isinstance(result, list) and len(result) > 0:
-                # Typical format: [{"generated_text": "..."}]
-                if isinstance(result[0], dict):
-                    return result[0].get("generated_text", "")
-                return str(result[0])
-            elif isinstance(result, dict):
-                return result.get("generated_text", "") or result.get("<MORE_DETAILED_CAPTION>", "")
-            return str(result) if result else ""
-
-        elif response.status_code == 503:
-            # Model is loading — could retry but we'll just skip this frame
-            return ""
-        else:
-            print(f"  [Vision] Florence-2 returned {response.status_code} for a frame")
-            return ""
+        response = client.chat.completions.create(
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"},
+                    },
+                    {
+                        "type": "text",
+                        "text": "Describe what you see in this video frame in 1-2 sentences. Focus on: people, text overlays, objects, actions, and setting. Be factual and concise.",
+                    },
+                ],
+            }],
+            max_tokens=150,
+            temperature=0.2,
+        )
+        return response.choices[0].message.content.strip()
 
     except Exception as e:
-        print(f"  [Vision] Florence-2 request failed: {e}")
+        print(f"  [Vision] Groq vision request failed: {e}")
         return ""
 
 
 def describe_frames(frames: list[dict]) -> list[TimelineEntry]:
     """
-    Runs Florence-2 on each keyframe and returns a timestamped timeline
+    Runs Llama 4 Scout on each keyframe and returns a timestamped timeline
     of visual descriptions (same format as OCR timeline for easy integration).
 
     Parameters:
@@ -83,13 +68,13 @@ def describe_frames(frames: list[dict]) -> list[TimelineEntry]:
 
     Returns:
         list of TimelineEntry with frame descriptions.
-        Skips frames where Florence-2 returns empty/fails.
+        Skips frames where vision returns empty/fails.
     """
-    hf_token = _get_hf_token()
+    client = _get_groq_client()
     timeline = []
 
     for i, frame in enumerate(frames):
-        description = describe_frame(frame["image_b64"], hf_token)
+        description = describe_frame(frame["image_b64"], client)
 
         if description and len(description.strip()) > 5:
             timestamp_seconds = frame.get("timestamp_seconds", float(i))

@@ -307,6 +307,28 @@ def _repair_groq_output(data: dict) -> dict:
         "quote", "code_snippet", "warning", "tip", "divider"
     }
 
+    # --- type_specific_fields: dict → list of {label, value} ---
+    tsf = data.get("type_specific_fields", [])
+    if isinstance(tsf, dict):
+        # Llama often returns {"label1": "value1", ...} instead of [{label, value}, ...]
+        data["type_specific_fields"] = [
+            {"label": str(k), "value": str(v)} for k, v in tsf.items()
+        ]
+    elif isinstance(tsf, list):
+        # Ensure each item is a dict with label/value keys
+        fixed_tsf = []
+        for item in tsf:
+            if isinstance(item, dict) and "label" in item and "value" in item:
+                fixed_tsf.append(item)
+            elif isinstance(item, dict):
+                # Try to salvage: take first key-value pair
+                for k, v in item.items():
+                    fixed_tsf.append({"label": str(k), "value": str(v)})
+                    break
+        data["type_specific_fields"] = fixed_tsf
+    else:
+        data["type_specific_fields"] = []
+
     # --- note_blocks: 'type' → 'block_type', ensure content is a string ---
     fixed_blocks = []
     for block in data.get("note_blocks", []):
