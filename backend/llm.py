@@ -282,6 +282,92 @@ def _format_timeline(timeline: list[TimelineEntry]) -> str:
     return "\n".join(f"[{entry.timestamp}] {entry.text}" for entry in timeline)
 
 
+def _repair_groq_output(data: dict) -> dict:
+    """
+    Normalize Groq/Llama output to match the Pydantic schema.
+
+    Llama ignores field-name constraints even with json_object mode and tends to:
+      - use 'type' instead of 'block_type' in note_blocks
+      - use 'item' instead of 'text' in action_items
+      - return concepts as plain strings instead of {concept_type, name, summary}
+      - use freeform strings for referenced_artifacts.type
+    """
+    VALID_ARTIFACT_TYPES = {
+        "book", "research_paper", "course", "song", "album", "movie",
+        "tv_show", "podcast", "video", "document", "presentation",
+        "lecture", "interview", "tutorial", "guide", "framework",
+        "template", "dataset", "tool", "link", "other"
+    }
+    VALID_CONCEPT_TYPES = {
+        "concept", "framework", "tool", "book", "person", "methodology", "website"
+    }
+    VALID_BLOCK_TYPES = {
+        "key_insight", "text", "bullets", "steps", "checklist",
+        "stat_row", "comparison", "label_values", "timeline",
+        "quote", "code_snippet", "warning", "tip", "divider"
+    }
+
+    # --- note_blocks: 'type' → 'block_type', ensure content is a string ---
+    fixed_blocks = []
+    for block in data.get("note_blocks", []):
+        if not isinstance(block, dict):
+            continue
+        # rename 'type' → 'block_type' if needed
+        if "block_type" not in block and "type" in block:
+            block["block_type"] = block.pop("type")
+        # ensure block_type is valid
+        if block.get("block_type") not in VALID_BLOCK_TYPES:
+            block["block_type"] = "text"
+        # content must be a string — join lists
+        if isinstance(block.get("content"), list):
+            block["content"] = "\n".join(str(x) for x in block["content"])
+        block.setdefault("title", "")
+        block.setdefault("content", "")
+        fixed_blocks.append(block)
+    data["note_blocks"] = fixed_blocks
+
+    # --- action_items: 'item' → 'text' ---
+    fixed_actions = []
+    for item in data.get("action_items", []):
+        if not isinstance(item, dict):
+            continue
+        if "text" not in item and "item" in item:
+            item["text"] = item.pop("item")
+        if "text" not in item:
+            continue  # unfixable — skip
+        item.setdefault("priority", "soon")
+        fixed_actions.append(item)
+    data["action_items"] = fixed_actions
+
+    # --- concepts: plain strings → {concept_type, name, summary} ---
+    fixed_concepts = []
+    for c in data.get("concepts", []):
+        if isinstance(c, str):
+            fixed_concepts.append({
+                "concept_type": "concept",
+                "name": c,
+                "summary": "",
+            })
+        elif isinstance(c, dict):
+            if "concept_type" not in c:
+                c["concept_type"] = "concept"
+            if c.get("concept_type") not in VALID_CONCEPT_TYPES:
+                c["concept_type"] = "concept"
+            c.setdefault("name", "")
+            c.setdefault("summary", "")
+            fixed_concepts.append(c)
+    data["concepts"] = fixed_concepts
+
+    # --- referenced_artifacts: normalise type to allowed literal ---
+    for artifact in data.get("referenced_artifacts", []):
+        if not isinstance(artifact, dict):
+            continue
+        if artifact.get("type") not in VALID_ARTIFACT_TYPES:
+            artifact["type"] = "other"
+
+    return data
+
+
 # ─── PRIMARY: Groq (Llama 3.3 70B) ──────────────────────────────────────────
 
 def _extract_via_groq(
@@ -319,7 +405,7 @@ def _extract_via_groq(
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a JSON-only output engine. Respond with valid JSON matching the requested schema. No markdown fences, no commentary."
+                        "content": "You are a JSON-only output engine. Respond with valid JSON matching the requested schema exactly. No markdown fences, no commentary."
                     },
                     {
                         "role": "user",
@@ -334,6 +420,7 @@ def _extract_via_groq(
             raw_text = response.choices[0].message.content
             data = json.loads(raw_text)
             data["source_url"] = source_url
+            data = _repair_groq_output(data)
 
             return KnowledgeEntry(**data)
 
